@@ -1,0 +1,22 @@
+Bonvortaro
+==========
+
+This is a web based Esperanto dictionary aiming to be a good one. The project
+aims, for now at least, to provide only the software. All data is taken from
+Reta Vortaro, which database is excellent data-wise in content and in license.
+
+Bonvortaro is built using Python and Django. It is a standard Django project
+except that depends on a recent Django, currently a unstable snapshot, soon just
+1.0. That is because it uses management commands. Configuration is, as in any
+other Django project, on settings.py and to create tables run ./manage
+syncdb. Learn more about it on http://djangoproject.org
+
+To import Reta Vortaro's data, run the following command:
+
+./manage.py import_vortaro $RETAVORTARO/revo/xml/
+
+where $RETAVORTARO is the directory where revoxml_YYYY-MM-DD.zip, downloaded
+from Reta Vortaro (TODO(pupeno): provide URL directly to download page), was
+uncompressed. The output is very verbose for now, when so many things can go
+wrong unexpected and it does take a very long while, it's a ton of XMLs, not
+Protocol Buffers ;).
