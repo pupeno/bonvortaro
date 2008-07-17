@@ -105,11 +105,19 @@ class Command(LabelCommand):
         
         mrk = data.xpath("/vortaro/art")[0].attrib["mrk"]
         
+        kap = data.xpath("/vortaro/art/kap")[0]
+        (begining, word, ending, ofc) = self._parse_kap(kap)
+        
+        (word, word_type) = self._interpret_word(begining, word.strip(), ending)
+        
+        print("word: %s\t\ttype: %s\t\tofc: %s" % (word, word_type, ofc))
+    
+    def _parse_kap(self, kap):
         begining = None
         word = None
         ending = None
         ofc = None
-        kap = data.xpath("/vortaro/art/kap")[0]
+        
         if kap.text:
             begining = kap.text.strip()
         for i in kap:
@@ -128,10 +136,8 @@ class Command(LabelCommand):
                 msg = "Unknown tag %s on\n%s" % (i.tag, etree.tostring(kap))
                 raise(Exception(msg))
         
-        (word, word_type) = self._interpret_word(begining, word.strip(), ending)
-        
-        print("word: %s\t\ttype: %s\t\tofc: %s" % (word, word_type, ofc))
-    
+        return begining, word, ending, ofc
+
     def _interpret_word(self, begining, word, ending):
         #TODO: find out what this exceptions are.
         if word in [u"plus"]:
