@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2008  José Pablo Fernández Silva# 
+# Copyright (C) 2008  José Pablo Fernández Silva
 #
 # This file is part of Bonvrtaro.
 #
