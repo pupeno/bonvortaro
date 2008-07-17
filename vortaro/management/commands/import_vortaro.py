@@ -23,16 +23,50 @@ from lxml import etree
 import pdb
 import re
 
+class UnknownWordType(Exception):
+    def __init__(self, begining, word, ending):
+        self.begining = begining
+        self.word = word
+        self.ending = ending
+    
+    def __str__(self):
+        msg = "Word '%s'" % self._to_ascii(self.word)
+        if self.begining is not None:
+            msg += ", begining with '%s'" % self._to_ascii(self.begining)
+        if self.ending is not None:
+            msg += ", ending with '%s'" % self._to_ascii(self.ending)
+        msg += " is of unknown type."
+        return msg
+    
+    def __unicode__(self):
+        msg = "Word '%s'" % self.word
+        if self.begining is not None:
+            msg += ", begining with '%s'" % self.begining
+        if self.ending is not None:
+            msg += ", ending with '%s'" % self.ending
+        msg += " is of unknown type."
+        return msg
+    
+    def _to_ascii(self, s):
+        try:
+            s.encode("ascii")
+            return s
+        except:
+            return repr(s)
+
 class Command(LabelCommand):
-    help = "Import a set of xml from reta-vortaro."
-    args = "[datadir]"
-    label = "data directory"
+    help = "Import an xml or a set of xml from reta-vortaro."
+    args = "[datadir or datafile]"
+    label = "data directory or file"
 
     correlative_matcher = re.compile(u"(ĉ|k|nen|t)i(a|e|o|u|om)")
-
     
     requires_model_validation = True
     can_import_settings = True
+    
+    def __init__(self, *args, **kwargs):
+        LabelCommand.__init__(self, *args, **kwargs)
+        self._parser = etree.XMLParser(load_dtd=True)
     
     def handle_label(self, data_dir, **options):
         print("Importing data from '%s'." % data_dir)
@@ -43,55 +77,61 @@ class Command(LabelCommand):
         #    print("The table has been obliterated!")
         #elif confirm == "no":
         #    print("Table left alone.")
-
+        
         problem_words = []
-        parser = etree.XMLParser(load_dtd=True)
-        for datafilename in glob.glob(os.path.join(data_dir, "*.xml")):
-            #print("Importing %s" % datafilename)
-            data = etree.parse(datafilename, parser)
-            
-            mrk = data.xpath("/vortaro/art")[0].attrib["mrk"]
-            
-            begining = ""
-            word = None
-            ending = None
-            ofc = None
-            kap = data.xpath("/vortaro/art/kap")[0]
-            if kap.text:
-                begining = kap.text.strip()
-            for i in kap:
-                if i.tag == "ofc":
-                    ofc = i.text
-                    if i.tail and i.tail.strip():
-                        begining += i.tail.strip()
-                elif i.tag == "rad":
-                    word = i.text.strip()
-                    if i.tail and i.tail.strip():
-                        ending = i.tail.strip()
-                elif i.tag == "fnt":
-                    pass # Ignoring sources for now.
-                else:
-                    msg = "Unknown tag %s on\n%s" % (i.tag, etree.tostring(kap))
-                    raise(Exception(msg))
-            
-
+        
+        def import_file(filename):
             try:
-                (word, word_type) = self._interpret_word(begining, word.strip(), ending)
+                self.import_file(filename)
             except Exception, e:
-            #    msg = e.message + "\non file %s" % datafilename
-            #    print(msg)
-                #raise Exception("Error processing file '%s': %s" % (datafilename, e.message))
-                problem_words.append((begining, word, ending))
-            
-            print("word: %s\t\ttype: %s\t\tofc: %s" % (word, word_type, ofc))
-        #else:
-        #    print("No file found on '%s'." % datafilename)
-        print("Done")
-
-        for (begining, word, ending) in problem_words:
-            print("problem word: begining: %s\tword: %s\tending: %s" % (begining, word, ending))
-        print("%s problem words." % len(problem_words))
-
+                problem_words.append(e)
+        
+        if os.path.isdir(data_dir):
+            for filename in glob.glob(os.path.join(data_dir, "*.xml")):
+                import_file(filename)
+            else:
+                print("No file found on '%s'." % filename)
+        else:
+            import_file(data_dir)
+        print("Done.")
+        
+        for word in problem_words:
+            print(unicode(word))
+        if len(problem_words) > 1:
+            print("%s problem words." % len(problem_words))
+    
+    def import_file(self, filename):
+        data = etree.parse(filename, self._parser)
+        
+        mrk = data.xpath("/vortaro/art")[0].attrib["mrk"]
+        
+        begining = None
+        word = None
+        ending = None
+        ofc = None
+        kap = data.xpath("/vortaro/art/kap")[0]
+        if kap.text:
+            begining = kap.text.strip()
+        for i in kap:
+            if i.tag == "ofc":
+                ofc = i.text
+                if i.tail and i.tail.strip():
+                    try: begining += i.tail.strip()
+                    except: begining = i.tail.strip()
+            elif i.tag == "rad":
+                word = i.text.strip()
+                if i.tail and i.tail.strip():
+                    ending = i.tail.strip()
+            elif i.tag == "fnt":
+                pass # Ignoring sources for now.
+            else:
+                msg = "Unknown tag %s on\n%s" % (i.tag, etree.tostring(kap))
+                raise(Exception(msg))
+        
+        (word, word_type) = self._interpret_word(begining, word.strip(), ending)
+        
+        print("word: %s\t\ttype: %s\t\tofc: %s" % (word, word_type, ofc))
+    
     def _interpret_word(self, begining, word, ending):
         #TODO: find out what this exceptions are.
         if word in [u"plus"]:
@@ -143,12 +183,4 @@ class Command(LabelCommand):
             elif ending == "/e":
                 return (word, "adverb")
             else:
-                msg = "Unknown word type:\nbegining: %s\nword: %s\nending: %s" % (self._to_ascii(begining), self._to_ascii(word), self._to_ascii(ending))
-                raise Exception(msg)
-
-    def _to_ascii(self, s):
-        try:
-            s.encode("ascii")
-            return s
-        except:
-            return repr(s)
+                raise UnknownWordType(begining, word, ending)
