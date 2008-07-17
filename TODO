@@ -1,2 +1,6 @@
 Translate everything to Esperanto (the reason why it is in English is that
 because I, Pablo, the main develoer, don't speak good enough Esperanto yet)
+
+Add importing logic for the remaining problematic words.
+
+Investigate what's the problem with xml/knid.xml
