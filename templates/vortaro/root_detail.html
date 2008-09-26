@@ -29,14 +29,21 @@ with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
   <dt>Kind</dt>
   <dd>{{ root.kind }}</dd>
 </dl>
+<h2>Words based on {{ root }}</h2>
+<ol class="wordlist">
+  {% for word in root.word_set.all %}
+  <li><a href="{% url word word.id %}">{{ word }}</a></li>
+  {% endfor %}
+</ol>
+<h2>Unused, unknown or Retavortaro specific information.</h2>
 <dl>
   <dt>Begining</dt>
-  <dd>{{ word.begining }}</dd>
+  <dd>{{ root.begining }}</dd>
   <dt>Ending</dt>
-  <dd>{{ word.ending }}</dd>
+  <dd>{{ root.ending }}</dd>
   <dt>Ofc</dt>
-  <dd>{{ word.ofc }}</dd>
+  <dd>{{ root.ofc }}</dd>
   <dt>Mrk</dt>
-  <dd>{{ word.mrk }}</dd>
+  <dd>{{ root.mrk }}</dd>
 </dl>
 {% endblock %}
