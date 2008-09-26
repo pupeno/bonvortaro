@@ -6,11 +6,11 @@ from django.views.generic.list_detail import object_list, object_detail
 admin.autodiscover()
 
 roots = {
-    "queryset": models.Root.objects.all(),
+    "queryset": models.Root.objects.order_by("root"),
     "template_object_name": "root"
 }
 words = {
-    "queryset": models.Word.objects.all(),
+    "queryset": models.Word.objects.order_by("word"),
     "template_object_name": "word"
 }
 
