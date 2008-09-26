@@ -25,9 +25,7 @@ with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
 <h1>Words</h1>
 <ol class="wordlist">
   {% for word in word_list %}
-  <li>
-    <a href="{% url word word.id %}">{{ word }}</a>
-  </li>
+  <li><a href="{% url word word.id %}">{{ word }}</a></li>
   {% endfor %}
 </ol>
 {% endblock %}

@@ -25,9 +25,7 @@ with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
 <h1>Root words</h1>
 <ol class="wordlist">
   {% for root in root_list %}
-  <li>
-    <a href="{% url root root.id %}">{{ root }}</a>
-  </li>
+  <li><a href="{% url root root.id %}">{{ root }}</a></li>
   {% endfor %}
 </ol>
 {% endblock %}
