@@ -66,6 +66,9 @@ class UnknownWordType(Exception):
 class TLD(object):
     def __init__(self, lit=None):
         self.lit = lit
+    
+    def __unicode__(self):
+        return self.lit
 
 class Command(LabelCommand):
     help = "Import an xml or a set of xml from reta-vortaro."
@@ -205,7 +208,7 @@ class Command(LabelCommand):
             root = TLD()
             ending = "o"
         elif begining == u"nedaŭra planto" and root == "":
-            begining = "nedaŭra "
+            begining = u"nedaŭra"
             root = TLD()
             ending = "o"
         
