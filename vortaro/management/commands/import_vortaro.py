@@ -25,6 +25,26 @@ import re
 
 from vortaro import models
 
+def _to_ascii(s):
+    s.replace(u"Ĉ", "Cx")
+    s.replace(u"ĉ", "cx")
+    s.replace(u"Ĝ", "Gx")
+    s.replace(u"ĝ", "gx")
+    s.replace(u"Ĥ", "Hx")
+    s.replace(u"ĥ", "hx")
+    s.replace(u"Ĵ", "Jx")
+    s.replace(u"ĵ", "jx")
+    s.replace(u"Ŝ", "Sx")
+    s.replace(u"Ŝ", "sx")
+    s.replace(u"Ŭ", "Ux")
+    s.replace(u"ŭ", "ux")
+    try:
+        s.encode("ascii")
+        return s
+    except:
+        return repr(s)
+
+
 class UnknownWordType(Exception):
     def __init__(self, begining, root, ending):
         self.begining = begining
@@ -32,13 +52,7 @@ class UnknownWordType(Exception):
         self.ending = ending
     
     def __str__(self):
-        msg = "Word '%s'" % self._to_ascii(self.root)
-        if self.begining is not None:
-            msg += ", begining with '%s'" % self._to_ascii(self.begining)
-        if self.ending is not None:
-            msg += ", ending with '%s'" % self._to_ascii(self.ending)
-        msg += " is of unknown type."
-        return msg
+        return _to_ascii(unicode(self))
     
     def __unicode__(self):
         msg = "Word '%s'" % self.root
@@ -48,13 +62,10 @@ class UnknownWordType(Exception):
             msg += ", ending with '%s'" % self.ending
         msg += " is of unknown type."
         return msg
-    
-    def _to_ascii(self, s):
-        try:
-            s.encode("ascii")
-            return s
-        except:
-            return repr(s)
+
+class TLD(object):
+    def __init__(self, lit=None):
+        self.lit = lit
 
 class Command(LabelCommand):
     help = "Import an xml or a set of xml from reta-vortaro."
@@ -76,6 +87,8 @@ class Command(LabelCommand):
         #    confirm = raw_input('Please enter either "yes" or "no": ')
         #if confirm == "yes":
         #    print("The table has been obliterated!")
+        models.Root.objects.all().delete()
+        models.Word.objects.all().delete()
         #elif confirm == "no":
         #    print("Table left alone.")
         
@@ -86,9 +99,12 @@ class Command(LabelCommand):
                 self.import_file(filename)
             except UnknownWordType, e:
                 problem_words.append(e)
+
         
         if os.path.isdir(data_dir):
-            for filename in glob.glob(os.path.join(data_dir, "*.xml")):
+            filenames = glob.glob(os.path.join(data_dir, "*.xml"))
+            filenames.sort()
+            for filename in filenames:
                 import_file(filename)
             else:
                 print("No file found on '%s'." % filename)
@@ -103,19 +119,50 @@ class Command(LabelCommand):
     
     def import_file(self, filename):
         print("Importing data from '%s'." % filename)
-        data = etree.parse(filename, self._parser)
         
-        mrk = data.xpath("/vortaro/art")[0].attrib["mrk"]
-        begining, root, ending, ofc = self._parse_kap(
-            data.xpath("/vortaro/art/kap")[0])
-        word_type = self._infer_word_type(begining, root.strip(), ending)
-        ro = models.Root.objects.create(root=root)
-        ro.natural_ending=ending
-        ro.word_type=word_type
-        ro.ofc=ofc
-        ro.mrk=mrk
-        ro.save()
-        print(u"word: %s\t\ttype: %s\t\tofc: %s" % (root, word_type, ofc))
+        for art in etree.parse(filename, self._parser).xpath("/vortaro/art"):
+            # Process the root word.
+            mrk = art.attrib["mrk"]
+            
+            assert len(art.findall("kap")) == 1, "An art has more than one kap."
+            begining, root, ending, ofc = self._parse_kap(art.find("kap"))
+            assert root is not None, "Found missing root word in kap in art."
+            
+            try:
+                kind = self._infer_word_kind(begining, root.strip(), ending)
+            except UnknownWordType, e:
+                kind = ""
+            
+            ro = models.Root.objects.create(root=root)
+            ro.begining = begining
+            ro.ending = ending
+            
+            ro.kind = kind
+
+            ro.ofc = ofc
+            ro.mrk = mrk
+
+            ro.save()
+            
+            print(u"root: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" %
+                  (root, begining, ending, kind, ofc))
+            
+            for drv in art.findall("drv"):
+                 mrk, begining, root, ending, kind, ofc = self._parse_drv(drv)
+                 
+                 word = begining + ro.root + ending
+                 if root.lit:
+                     word = root.lit + word[1:]
+                 print(u"\t\tword: %s" % word)
+                 wo = models.Word.objects.create(
+                     word=word,
+                     kind=kind,
+                     #first=,
+                     root=ro,
+                     begining=begining,
+                     ending=ending,
+                     ofc=ofc,
+                     mrk=mrk)
     
     def _parse_kap(self, kap):
         begining = ""
@@ -131,12 +178,20 @@ class Command(LabelCommand):
                 ofc = i.text or ""
                 if i.tail and i.tail.strip():
                     begining += i.tail.strip()
-            elif i.tag == "rad":
-                root = i.text.strip()
+            elif i.tag == "rad" or i.tag == "tld":
+                if i.tag == "rad":
+                    root = i.text.strip()
+                else:
+                    if "lit" in i.attrib:
+                        root = TLD(lit=i.attrib["lit"])
+                    else:
+                        root = TLD()
                 if i.tail and i.tail.strip():
                     ending = i.tail.strip()
             elif i.tag == "fnt":
-                pass # Ignoring sources for now.
+                pass # TODO: return the fnt when it's used for something.
+            elif i.tag == "var":
+                pass # TODO: parse variations and return them.
             else:
                 msg = "Unknown tag %s on\n%s" % (i.tag, etree.tostring(kap))
                 raise(Exception(msg))
@@ -144,39 +199,67 @@ class Command(LabelCommand):
         if ending and ending[0] == "/":
             ending = ending [1:]
         
-        return begining, root, ending, ofc
-
-    def _infer_word_type(self, begining, root, ending):
-        #TODO: find out what this exceptions are.
-        if root in [u"plus"]:
-            return "mathematical operation"
-        elif root in [u"hodiaŭ"]:
-            return "time"
-        elif root in [u"kaj", u"ankaŭ", u"malgraŭ", u"ambaŭ", u"ĵus", u"preskaŭ", u"ĉu", u"sed", u"aŭ", u"da", u"de", u"el", u"la", u"en"]:
-            return "connector"
-        elif root in [u"unu", u"du", u"tri", u"kvar", u"kvin", u"ses", u"sep", u"ok", u"naŭ", u"dek", u"cent", u"mil"]:
-            return "number"
-        elif re.match(self.correlative_matcher, root):
-            return "correlative"
-        elif root in [u"trans", u"ĝis", u"ĉe"]:
-            return "preposition"
-        elif root in [u"mi", u"ni", u"ili", u"li", u"ŝi", u"ĝi", u"ĉi"]:
-            return "personal pronoun"
-        elif root in [u"ankoraŭ", u"almenaŭ", u"apenaŭ", u"baldaŭ", u"preskaŭ", u"eĉ", u"jam", u"jen", u"ĵus", u"morgaŭ", u"hodiaŭ", u"hieraŭ", u"nun", u"nur", u"plu", u"tre", u"tro", u"tuj", u"for",    u"des", u"ĉi"]:
-            return "adverb"
-        elif root in [u"Kabe", u"Singapur", u"Novjork", u"Peterburg", u"Toki", u"TTT", u"Kiev", u"Ĥarkov"]:
-            return "name"
-        elif root in [u"pum"]:
-            return "who knows"
-        #elif root == u"ordinaci" and ending == u"/o, ordin/o":
-        #    ending = "/o"
-        #elif root == u"dis":
-        #    ending = "-"
-        #elif root == u"knid" and ending == u"/uloj":
-        #    root = "knidul"
-        #    ending = "/oj"
+        # Handle exceptions
+        if begining == "ilo" and root == "":
+            begining = ""
+            root = TLD()
+            ending = "o"
+        elif begining == u"nedaŭra planto" and root == "":
+            begining = "nedaŭra "
+            root = TLD()
+            ending = "o"
         
-        if begining == "-":
+        return begining, root, ending, ofc
+    
+    def _parse_drv(self, drv):
+        mrk = drv.attrib["mrk"]
+        
+        assert len(drv.findall("kap")) == 1, "A drv has more than one kap."
+        begining, root, ending, ofc = self._parse_kap(drv.find("kap"))
+        assert isinstance(root, TLD), "Found spurious root word, '%s', in kap in drv." % root
+        
+        try:
+            kind = self._infer_word_kind(begining, root, ending)
+        except UnknownWordType, e:
+            kind = ""
+        
+        print(u"\troot.lit: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" %
+              (root.lit, begining, ending, kind, ofc))
+
+        return mrk, begining, root, ending, kind, ofc
+    
+    def _infer_word_kind(self, begining, root, ending):
+        #TODO: find out what this exceptions are.
+        if isinstance(root, str):
+            if root in [u"plus"]:
+                return "mathematical operation"
+            elif root in [u"hodiaŭ"]:
+                return "time"
+            elif root in [u"kaj", u"ankaŭ", u"malgraŭ", u"ambaŭ", u"ĵus", u"preskaŭ", u"ĉu", u"sed", u"aŭ", u"da", u"de", u"el", u"la", u"en"]:
+                return "connector"
+            elif root in [u"unu", u"du", u"tri", u"kvar", u"kvin", u"ses", u"sep", u"ok", u"naŭ", u"dek", u"cent", u"mil"]:
+                return "number"
+            elif re.match(self.correlative_matcher, root):
+                return "correlative"
+            elif root in [u"trans", u"ĝis", u"ĉe"]:
+                return "preposition"
+            elif root in [u"mi", u"ni", u"ili", u"li", u"ŝi", u"ĝi", u"ĉi"]:
+                return "personal pronoun"
+            elif root in [u"ankoraŭ", u"almenaŭ", u"apenaŭ", u"baldaŭ", u"preskaŭ", u"eĉ", u"jam", u"jen", u"ĵus", u"morgaŭ", u"hodiaŭ", u"hieraŭ", u"nun", u"nur", u"plu", u"tre", u"tro", u"tuj", u"for",    u"des", u"ĉi"]:
+                return "adverb"
+            elif root in [u"Kabe", u"Singapur", u"Novjork", u"Peterburg", u"Toki", u"TTT", u"Kiev", u"Ĥarkov"]:
+                return "name"
+            elif root in [u"pum"]:
+                return "who knows"
+            #elif root == u"ordinaci" and ending == u"/o, ordin/o":
+            #    ending = "/o"
+            #elif root == u"dis":
+            #    ending = "-"
+            #elif root == u"knid" and ending == u"/uloj":
+            #    root = "knidul"
+            #    ending = "/oj"
+        
+        if begining == "-" and  isinstance(root, str):
             if root in ["a", "e", "i", "o"]:
                 return "possible ending letter"
             elif len(root) >= 2 or (root == "i" and ending == "/"):

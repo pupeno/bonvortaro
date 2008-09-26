@@ -31,18 +31,44 @@ from django.db import models
 
 class Root(models.Model):
     root = models.CharField(max_length=70)
-    natural_ending = models.CharField(max_length=70, blank=True)
-
-    word_type = models.CharField(max_length=70) #, choices=WORD_TYPES)
+    kind = models.CharField(max_length=70, blank=True) #, choices=WORD_TYPES)
     
-    # Not used or unknown.
-    ofc = models.CharField(max_length=70)
+    # Not used, unknown or Retavortaro specific.
+    begining = models.CharField(max_length=70, blank=True)
+    ending = models.CharField(max_length=70, blank=True)
+    ofc = models.CharField(max_length=70, blank=True)
     #fnt = models.CharField(max_length=20)
+    mrk = models.CharField(max_length=100, blank=True)
     
-    # Reta-vortaro specific.
-    mrk = models.CharField(max_length=100)
+#    class Admin:
+#        list_display = ["root", "kind", "begining", "ending", "ofc"]
+#        list_filter = ["begining", "ending", "kind", "ofc"]
+    
+#    def __str__(self):
+#        return "%s %s %s" % (self._to_ascii(self.begining),
+#                             self._to_ascii(self.root),
+#                             self._to_ascii(self.ending))
+    
+#    def _to_ascii(self, s):
+#        try:
+#            s.encode("ascii")
+#            return s
+#        except:
+#            return repr(s)
 
-    class Admin:
-        list_display = ("root", "natural_ending", "word_type", "ofc")
-        list_filter = ["natural_ending", "word_type", "ofc"]
-
+class Word(models.Model):
+    word = models.CharField(max_length=70)
+    kind = models.CharField(max_length=70, blank=True) #, choices=WORD_TYPES)
+    first = models.BooleanField()
+    
+    # Not used, unknown or Retavortaro specific.
+    root = models.ForeignKey(Root)
+    begining = models.CharField(max_length=70, blank=True)
+    ending = models.CharField(max_length=70, blank=True)
+    ofc = models.CharField(max_length=70, blank=True)
+    #fnt = models.CharField(max_length=20)
+    mrk = models.CharField(max_length=100, blank=True)
+    
+#    class Admin:
+#        list_display = ["word", "begining", "root", "ending", "kind", "ofc"]
+#        list_filter = ["begining", "ending", "kind", "ofc"]
