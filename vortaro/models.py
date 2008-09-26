@@ -44,11 +44,11 @@ class Root(models.Model):
         return u"%s %s %s" % (self.begining, self.root, self.ending)
 
 class Word(models.Model):
+    root = models.ForeignKey(Root)
     word = models.CharField(max_length=70)
     kind = models.CharField(max_length=70, blank=True) #, choices=WORD_TYPES)
     
     # Not used, unknown or Retavortaro specific.
-    root = models.ForeignKey(Root)
     begining = models.CharField(max_length=70, blank=True)
     ending = models.CharField(max_length=70, blank=True)
     ofc = models.CharField(max_length=70, blank=True)
