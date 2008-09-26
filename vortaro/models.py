@@ -29,6 +29,32 @@ from django.db import models
 #    ("d", "adverb")
 #)
 
+def _to_xsistemo(s):
+    """Turn a nice unicode string into an hideous x-systemo one."""
+    replacements = [
+        (u"Ĉ", "Cx"),
+        (u"ĉ", "cx"),
+        (u"Ĝ", "Gx"),
+        (u"ĝ", "gx"),
+        (u"Ĥ", "Hx"),
+        (u"ĥ", "hx"),
+        (u"Ĵ", "Jx"),
+        (u"ĵ", "jx"),
+        (u"Ŝ", "Sx"),
+        (u"ŝ", "sx"),
+        (u"Ŭ", "Ux"),
+        (u"ŭ", "ux"),
+    ]
+    
+    for old, new in replacements:
+        s = s.replace(old, new)
+    
+    try:
+        s = s.encode("ascii")
+        return s
+    except:
+        return repr(s)
+
 class Root(models.Model):
     root = models.CharField(max_length=70)
     kind = models.CharField(max_length=70, blank=True) #, choices=WORD_TYPES)
@@ -57,3 +83,6 @@ class Word(models.Model):
 
     def __unicode__(self):
         return self.word
+
+    def link_to_retavortaro(self):
+        return "http://reta-vortaro.de/revo/art/%s.html#%s" % (_to_xsistemo(self.root.root), self.mrk)

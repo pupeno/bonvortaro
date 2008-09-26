@@ -25,26 +25,6 @@ import re
 
 from vortaro import models
 
-def _to_ascii(s):
-    s.replace(u"Ĉ", "Cx")
-    s.replace(u"ĉ", "cx")
-    s.replace(u"Ĝ", "Gx")
-    s.replace(u"ĝ", "gx")
-    s.replace(u"Ĥ", "Hx")
-    s.replace(u"ĥ", "hx")
-    s.replace(u"Ĵ", "Jx")
-    s.replace(u"ĵ", "jx")
-    s.replace(u"Ŝ", "Sx")
-    s.replace(u"Ŝ", "sx")
-    s.replace(u"Ŭ", "Ux")
-    s.replace(u"ŭ", "ux")
-    try:
-        s.encode("ascii")
-        return s
-    except:
-        return repr(s)
-
-
 class UnknownWordType(Exception):
     def __init__(self, begining, root, ending):
         self.begining = begining
@@ -52,7 +32,7 @@ class UnknownWordType(Exception):
         self.ending = ending
     
     def __str__(self):
-        return _to_ascii(unicode(self))
+        return models._to_xsistemo(unicode(self))
     
     def __unicode__(self):
         msg = "Word '%s'" % self.root
