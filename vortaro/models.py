@@ -41,7 +41,7 @@ class Root(models.Model):
     mrk = models.CharField(max_length=100, blank=True)
 
     def __unicode__(self):
-        return u"%s %s %s" % (self.begining, self.root, self.ending)
+        return self.root
 
 class Word(models.Model):
     root = models.ForeignKey(Root)
