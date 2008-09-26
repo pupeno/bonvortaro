@@ -211,6 +211,10 @@ class Command(LabelCommand):
             begining = u"nedaŭra"
             root = TLD()
             ending = "o"
+        elif begining == u"naĝoveziko,":
+            begining = u"naĝo"
+            root = TLD()
+            ending = "o"
         
         return begining, root, ending, ofc
     
@@ -219,7 +223,7 @@ class Command(LabelCommand):
         
         assert len(drv.findall("kap")) == 1, "A drv has more than one kap."
         begining, root, ending, ofc = self._parse_kap(drv.find("kap"))
-        assert isinstance(root, TLD), "Found spurious root word, '%s', in kap in drv." % root
+        assert isinstance(root, TLD), "Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (root, begining, ending)
         
         try:
             kind = self._infer_word_kind(begining, root, ending)
