@@ -1,0 +1,33 @@
+{% comment %}
+Copyright (C) 2008  José Pablo Fernández Silva
+
+This file is part of Bonvrtaro.
+
+Bonvortaro is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+Bonvortaro is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License along
+with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
+{% endcomment %}
+
+{% extends "base.html" %}
+
+{% block title %}Root words{% endblock %}
+
+{% block content %}
+<h1>Root words</h1>
+<ol class="wordlist">
+  {% for root in root_list %}
+  <li>
+    <a href="% url root root.id %">{{ root }}</a>
+  </li>
+  {% endfor %}
+</ol>
+{% endblock %}

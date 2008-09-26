@@ -1,10 +1,29 @@
-# Django settings for bonvortaro project.
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008  José Pablo Fernández Silva
+#
+# This file is part of Bonvrtaro.
+#
+# Bonvortaro is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# Bonvortaro is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License along
+# with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
+
+PROJECT_DIR = os.path.dirname(__file__)
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-    ('J. Pablo Fernandez', 'pupeno@pupeno.com'),
+    ('J. Pablo Fernández', 'pupeno@pupeno.com'),
 )
 
 MANAGERS = ADMINS
@@ -35,7 +54,7 @@ USE_I18N = True
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = ''
+MEDIA_ROOT = '' # os.path.join(PROJECT_DIR, "media")
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
@@ -70,6 +89,7 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
+    os.path.join(PROJECT_DIR, "templates").replace("\\","/"),
 )
 
 INSTALLED_APPS = (
