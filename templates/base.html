@@ -16,7 +16,6 @@ details.
 You should have received a copy of the GNU Affero General Public License along
 with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
@@ -26,9 +25,10 @@ with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
 <body>
   <div id="sidebar">
     {% block sidebar %}
-    <ul>
+    <ol class="menu">
       <li><a href="/">Home</a></li>
-    </ul>
+      <li><a herf="{% url roots %}">Root words</a></li>
+    </ol>
     {% endblock %}
     {% if user.is_authenticated %}
     <p>Welcome back, {{ user.username }}!</p>

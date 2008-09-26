@@ -19,15 +19,8 @@ You should have received a copy of the GNU Affero General Public License along
 with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
 {% endcomment %}
 
-{% block title %}Root words{% endblock %}
+{% block title %}Root word: {{ root }}{% endblock %}
 
 {% block content %}
-<h1>Root words</h1>
-<ol class="wordlist">
-  {% for root in root_list %}
-  <li>
-    <a href="{% url root root.id %}">{{ root }}</a>
-  </li>
-  {% endfor %}
-</ol>
+<h1>Root word: {{ root }}</h1>
 {% endblock %}

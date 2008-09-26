@@ -12,8 +12,9 @@ roots = {
 
 urlpatterns = patterns(
     '',
-    url(r"^root/$", object_list, roots, name="roots"),
     
-    # Uncomment this for admin:
-    (r'^admin/(.*)', admin.site.root),
+    url(r"^root/$", object_list, roots, name="roots"),
+    url(r"^root/(?P<object_id>\d+)/$", object_detail, roots, name="root"),
+    
+    url(r'^admin/(.*)', admin.site.root, name="admin"),
 )
