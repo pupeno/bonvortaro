@@ -134,7 +134,7 @@ class Command(LabelCommand):
             try:
                 kind = self._infer_word_kind(begining, root.strip(), ending)
             except UnknownWordType, e:
-                kind = ""
+                kind = "unknown"
             
             ro = models.Root.objects.create(root=root)
             ro.begining = begining
@@ -256,8 +256,8 @@ class Command(LabelCommand):
                 return "adverb"
             elif root in [u"Kabe", u"Singapur", u"Novjork", u"Peterburg", u"Toki", u"TTT", u"Kiev", u"Ĥarkov"]:
                 return "name"
-            elif root in [u"pum"]:
-                return "who knows"
+            #elif root in [u"pum"]:
+            #    return "who knows"
             #elif root == u"ordinaci" and ending == u"/o, ordin/o":
             #    ending = "/o"
             #elif root == u"dis":
