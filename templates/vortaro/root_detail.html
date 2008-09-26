@@ -23,4 +23,20 @@ with Bonvortaro.  If not, see <http://www.gnu.org/licenses/>.
 
 {% block content %}
 <h1>Root word: {{ root }}</h1>
+<dl>
+  <dt>Root</dt>
+  <dd>{{ root.root }}</dd>
+  <dt>Kind</dt>
+  <dd>{{ root.kind }}</dd>
+</dl>
+<dl>
+  <dt>Begining</dt>
+  <dd>{{ word.begining }}</dd>
+  <dt>Ending</dt>
+  <dd>{{ word.ending }}</dd>
+  <dt>Ofc</dt>
+  <dd>{{ word.ofc }}</dd>
+  <dt>Mrk</dt>
+  <dd>{{ word.mrk }}</dd>
+</dl>
 {% endblock %}
