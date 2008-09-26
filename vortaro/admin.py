@@ -8,7 +8,7 @@ class RootAdmin(admin.ModelAdmin):
 admin.site.register(Root, RootAdmin)
 
 class WordAdmin(admin.ModelAdmin):
-    list_display = ["word", "begining", "root", "ending", "kind", "ofc"]
+    list_display = ["word", "kind", "begining", "root", "ending", "ofc", "mrk"]
     list_filter = ["ending", "kind", "ofc", "begining"]
 
 admin.site.register(Word, WordAdmin)

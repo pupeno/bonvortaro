@@ -46,7 +46,6 @@ class Root(models.Model):
 class Word(models.Model):
     word = models.CharField(max_length=70)
     kind = models.CharField(max_length=70, blank=True) #, choices=WORD_TYPES)
-    first = models.BooleanField()
     
     # Not used, unknown or Retavortaro specific.
     root = models.ForeignKey(Root)

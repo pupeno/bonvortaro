@@ -160,7 +160,6 @@ class Command(LabelCommand):
                  wo = models.Word.objects.create(
                      word=word,
                      kind=kind,
-                     #first=,
                      root=ro,
                      begining=begining,
                      ending=ending,
