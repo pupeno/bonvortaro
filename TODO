@@ -5,6 +5,8 @@ Add importing logic for the remaining problematic words.
 
 Investigate what's the problem with xml/knid.xml
 
-Parse an store fnt.
+Parse and store fnt.
 
-Parse an store var (word variations, on kaps).
+Parse and store var (word variations, on kaps).
+
+Investigate subart and how to import them.
