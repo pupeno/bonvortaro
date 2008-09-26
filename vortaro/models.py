@@ -39,22 +39,9 @@ class Root(models.Model):
     ofc = models.CharField(max_length=70, blank=True)
     #fnt = models.CharField(max_length=20)
     mrk = models.CharField(max_length=100, blank=True)
-    
-#    class Admin:
-#        list_display = ["root", "kind", "begining", "ending", "ofc"]
-#        list_filter = ["begining", "ending", "kind", "ofc"]
-    
-#    def __str__(self):
-#        return "%s %s %s" % (self._to_ascii(self.begining),
-#                             self._to_ascii(self.root),
-#                             self._to_ascii(self.ending))
-    
-#    def _to_ascii(self, s):
-#        try:
-#            s.encode("ascii")
-#            return s
-#        except:
-#            return repr(s)
+
+    def __unicode__(self):
+        return u"%s %s %s" % (self.begining, self.root, self.ending)
 
 class Word(models.Model):
     word = models.CharField(max_length=70)
@@ -68,7 +55,3 @@ class Word(models.Model):
     ofc = models.CharField(max_length=70, blank=True)
     #fnt = models.CharField(max_length=20)
     mrk = models.CharField(max_length=100, blank=True)
-    
-#    class Admin:
-#        list_display = ["word", "begining", "root", "ending", "kind", "ofc"]
-#        list_filter = ["begining", "ending", "kind", "ofc"]
