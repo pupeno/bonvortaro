@@ -57,4 +57,4 @@ class Word(models.Model):
     mrk = models.CharField(max_length=100, blank=True)
 
     def __unicode__(self):
-        return u"%s %s %s" % (self.begining, self.root.root, self.ending)
+        return self.word
