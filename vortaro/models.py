@@ -30,7 +30,7 @@ from django.db import models
 #)
 
 def _to_xsistemo(s):
-    """Turn a nice unicode string into an hideous x-systemo one."""
+    """Turn a nice unicode string into an hideous x-sistemo one."""
     replacements = [
         (u"Ĉ", "Cx"),
         (u"ĉ", "cx"),
