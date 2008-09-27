@@ -249,29 +249,31 @@ class Command(LabelCommand):
         return definition.strip().replace("\n", " ")
     
     def _parse_kap(self, kap):
-        begining = ""
-        root = ""
-        ending = ""
-        ofc = ""
-        #fnt = ""
+        word = {
+            "begining": "",
+            "root": "",
+            "ending": "",
+            "ofc": "",
+            #fnt: "",
+        }
         
         if kap.text:
-            begining = kap.text.strip()
+            word["begining"] = kap.text.strip()
         for i in kap:
             if i.tag == "ofc":
-                ofc = i.text or ""
+                word["ofc"] = i.text or ""
                 if i.tail and i.tail.strip():
-                    begining += i.tail.strip()
+                    word["begining"] += i.tail.strip()
             elif i.tag == "rad" or i.tag == "tld":
                 if i.tag == "rad":
-                    root = i.text.strip()
+                    word["root"] = i.text.strip()
                 else:
                     if "lit" in i.attrib:
-                        root = TLD(lit=i.attrib["lit"])
+                        word["root"] = TLD(lit=i.attrib["lit"])
                     else:
-                        root = TLD()
+                        word["root"] = TLD()
                 if i.tail and i.tail.strip():
-                    ending = i.tail.strip()
+                    word["ending"] = i.tail.strip()
             elif i.tag == "fnt":
                 pass # TODO: return the fnt when it's used for something.
             elif i.tag == "var":
@@ -279,25 +281,25 @@ class Command(LabelCommand):
             else:
                 raise UnexpectedTag(i)
         
-        if ending and ending[0] == "/":
-            ending = ending[1:]
+        if word["ending"] and word["ending"][0] == "/":
+            word["ending"] = word["ending"][1:]
         
         # Handle exceptions
         if self._exceptions:
-            if begining == "ilo" and root == "":
-                begining = ""
-                root = TLD()
-                ending = "o"
-            elif begining == u"nedaŭra planto" and root == "":
-                begining = u"nedaŭra"
-                root = TLD()
-                ending = "o"
-            elif begining == u"naĝoveziko,":
-                begining = u"naĝo"
-                root = TLD()
-                ending = "o"
+            if word["begining"] == "ilo" and word["root"] == "":
+                word["begining"] = ""
+                word["root"] = TLD()
+                word["ending"] = "o"
+            elif word["begining"] == u"nedaŭra planto" and word["root"] == "":
+                word["begining"] = u"nedaŭra"
+                word["root"] = TLD()
+                word["ending"] = "o"
+            elif word["begining"] == u"naĝoveziko,":
+                word["begining"] = u"naĝo"
+                word["root"] = TLD()
+                word["ending"] = "o"
         
-        return begining, root, ending, ofc
+        return word["begining"], word["root"], word["ending"], word["ofc"]
     
     def _infer_word_kind(self, begining, root, ending):
         #TODO: find out what this exceptions are.
