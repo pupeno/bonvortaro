@@ -43,6 +43,14 @@ class UnknownWordType(Exception):
         msg += " is of unknown type."
         return msg
 
+class UnexpectedTag(Exception):
+    def __init__(self, tag):
+        self.tag = tag
+
+    def __str__(self):
+        return "\n%s in\n%s" % (
+            etree.tostring(self.tag), etree.tostring(self.tag.getparent()))
+
 class TLD(object):
     def __init__(self, lit=None):
         self.lit = lit
@@ -110,7 +118,7 @@ class Command(LabelCommand):
             # Process the root word.
             mrk = art.attrib["mrk"]
             
-            assert len(art.findall("kap")) == 1, "An art has more than one kap."
+            assert len(art.findall("kap")) == 1, "An art, %s, has more than one kap." % mrk
             begining, root, ending, ofc = self._parse_kap(art.find("kap"))
             assert root is not None, "Found missing root word in kap in art."
             
@@ -180,10 +188,7 @@ class Command(LabelCommand):
         if dif.text is not None:
             definition += dif.text.strip()
         for i in dif:
-            if i.text is not None:
-                definition += i.text.strip()
-            if i.tail is not None:
-                definition += i.tail.strip()
+            raise UnexpectedTag(i)
         return definition
     
     def _parse_kap(self, kap):
@@ -215,8 +220,7 @@ class Command(LabelCommand):
             elif i.tag == "var":
                 pass # TODO: parse variations and return them.
             else:
-                msg = "Unknown tag %s on\n%s" % (i.tag, etree.tostring(kap))
-                raise(Exception(msg))
+                raise UnexpectedTag(i)
         
         if ending and ending[0] == "/":
             ending = ending [1:]
