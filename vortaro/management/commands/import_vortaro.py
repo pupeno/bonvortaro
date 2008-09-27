@@ -172,7 +172,7 @@ class Command(LabelCommand):
                 for art_child in vortaro_child.getchildren():
                     if art_child.tag == "kap":
                         # kap defines what the root word looks like.
-                        root["begining"], root["root"], root["ending"], root["ofc"] = self._parse_kap(vortaro_child.find("kap"))
+                        root.update(self._parse_kap(vortaro_child.find("kap")))
                         assert root["root"] is not None, "A kap, in art %s, is missing the root word." % root["mrk"]
                         try:
                             root["kind"] = self._infer_word_kind(root["begining"], root["root"].strip(), root["ending"])
@@ -213,7 +213,7 @@ class Command(LabelCommand):
         word["mrk"] = drv.attrib["mrk"]
         
         assert len(drv.findall("kap")) == 1, "A drv has more than one kap."
-        word["begining"], word["root"], word["ending"], word["ofc"] = self._parse_kap(drv.find("kap"))
+        word.update(self._parse_kap(drv.find("kap")))
         assert isinstance(word["root"], TLD), "Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (word["root"], word["begining"], word["ending"])
         
         try:
@@ -249,6 +249,11 @@ class Command(LabelCommand):
         return definition.strip().replace("\n", " ")
     
     def _parse_kap(self, kap):
+        """Parse a kap element.
+
+        The result of a kap element is a word, it might be a root with some
+        natural ending or a real word.
+        """
         word = {
             "begining": "",
             "root": "",
@@ -299,7 +304,7 @@ class Command(LabelCommand):
                 word["root"] = TLD()
                 word["ending"] = "o"
         
-        return word["begining"], word["root"], word["ending"], word["ofc"]
+        return word
     
     def _infer_word_kind(self, begining, root, ending):
         #TODO: find out what this exceptions are.
