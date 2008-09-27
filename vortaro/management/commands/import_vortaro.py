@@ -173,7 +173,7 @@ class Command(LabelCommand):
                     if art_child.tag == "kap":
                         # kap defines what the root word looks like.
                         root["begining"], root["root"], root["ending"], root["ofc"] = self._parse_kap(vortaro_child.find("kap"))
-                        assert root is not None, "A kap, in art %s, is missing the root word." % root["mrk"]
+                        assert root["root"] is not None, "A kap, in art %s, is missing the root word." % root["mrk"]
                         try:
                             root["kind"] = self._infer_word_kind(root["begining"], root["root"].strip(), root["ending"])
                         except UnknownWordType, e:
