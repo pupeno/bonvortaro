@@ -46,7 +46,7 @@ class UnknownWordType(Exception):
 class UnexpectedTag(Exception):
     def __init__(self, tag):
         self.tag = tag
-
+    
     def __str__(self):
         return "\n%s in\n%s" % (
             etree.tostring(self.tag), etree.tostring(self.tag.getparent()))
@@ -65,7 +65,7 @@ class Command(LabelCommand):
     help = "Import an xml or a set of xml from reta-vortaro."
     args = "[datadir or datafile]"
     label = "data directory or file"
-
+    
     correlative_matcher = re.compile(u"(ĉ|k|nen|t)i(a|e|o|u|om)")
     
     requires_model_validation = True
@@ -73,28 +73,34 @@ class Command(LabelCommand):
     
     def __init__(self, *args, **kwargs):
         LabelCommand.__init__(self, *args, **kwargs)
-        self._parser = etree.XMLParser(load_dtd=True)
+        self._verbosity = 1     # TODO: let an argument set this. Default to 1.
+        self._obliterate = True # TODO: let an argument set this. Default to None
+        self._parser = etree.XMLParser(load_dtd=True, remove_blank_text=True, remove_comments=True)
     
     def handle_label(self, data_dir, **options):
-        #confirm = raw_input("Would you like to oblitarate the words table first? (yes/no): ")
-        #while confirm not in ["yes", "no"]:
-        #    confirm = raw_input('Please enter either "yes" or "no": ')
-        #if confirm == "yes":
-        #    print("The table has been obliterated!")
-        models.Root.objects.all().delete()
-        models.Word.objects.all().delete()
-        #elif confirm == "no":
-        #    print("Table left alone.")
+        if self._obliterate is None:
+            confirm = raw_input("Would you like to oblitarate the words table first? (yes/no): ")
+            while confirm not in ["yes", "no"]:
+                confirm = raw_input('Please enter either "yes" or "no": ')
+            if confirm == "yes":
+                this._obliterate = True
+            else:
+                this._obliterate = False
+        for table in [models.Root, models.Word, models.Definition, models.Translation]:
+            self._log(1, "Obliterating table for %s." % table)
+            table.objects.all().delete()
         
         problem_words = []
         
         def import_file(filename):
+            """Import a file and keep track of the problematic words."""
             try:
                 self.import_file(filename)
-            except UnknownWordType, e:
+            except Exception, e:
                 problem_words.append(e)
-
         
+        # If it is a directory, import all the XML filse inside it, otherwise,
+        # just import the file.
         if os.path.isdir(data_dir):
             filenames = glob.glob(os.path.join(data_dir, "*.xml"))
             filenames.sort()
@@ -104,58 +110,85 @@ class Command(LabelCommand):
                 print("No file found on '%s'." % filename)
         else:
             import_file(data_dir)
-        print("Done.")
         
+        # Done.
+        self._log(0, "Done.")
+        # Report the problematic words, if any.
         for word in problem_words:
-            print(unicode(word))
+            self._log(0, unicode(word))
         if len(problem_words) > 1:
-            print("%s problem words." % len(problem_words))
+            self._log(0, "%s problem words." % len(problem_words))
     
     def import_file(self, filename):
-        print("Importing data from '%s'." % filename)
+        """Import an individual filename, turning the XML into records."""
         
-        for art in etree.parse(filename, self._parser).xpath("/vortaro/art"):
-            # Process the root word.
-            mrk = art.attrib["mrk"]
-            
-            assert len(art.findall("kap")) == 1, "An art, %s, has more than one kap." % mrk
-            begining, root, ending, ofc = self._parse_kap(art.find("kap"))
-            assert root is not None, "Found missing root word in kap in art."
-            
-            try:
-                kind = self._infer_word_kind(begining, root.strip(), ending)
-            except UnknownWordType, e:
-                kind = "unknown"
-            
-            ro = models.Root.objects.create(root=root)
-            ro.begining = begining
-            ro.ending = ending
-            
-            ro.kind = kind
+        self._log(1, "Importing data from '%s'." % filename)
+        
+        xmltree = etree.parse(filename, self._parser)
+        roots = self._parse_vortaro(xmltree.getroot())
+        
+        for root in roots:
+            ro = models.Root.objects.create(
+                root=root["root"],
+                kind=root["kind"],
+                begining=root["begining"],
+                ending = root["ending"],
+                ofc = root["ofc"],
+                mrk = root["mrk"])
+            self._log(1, "\tRoot: %s." % ro)
 
-            ro.ofc = ofc
-            ro.mrk = mrk
-
-            ro.save()
+            for word in root["words"]:
+                wo = models.Word.objects.create(
+                    root=ro,
+                    word=word["word"],
+                    kind=word["kind"],
+                    begining=word["begining"],
+                    ending=word["ending"],
+                    ofc=word["ofc"],
+                    mrk=word["mrk"])
+                self._log(1, u"\t\tWord: %s." % wo)
+    
+    def _parse_vortaro(self, vortaro):
+        roots = []
+        for vortaro_child in vortaro.getchildren():
+            if vortaro_child.tag == "art":
+                # An art is essentially a root word,
+                root = {}
+                root["mrk"] = vortaro_child.attrib["mrk"]
+                # which must have only one kap.
+                assert len(vortaro_child.findall("kap")) == 1, "An art, %s, has more than one kap, when it shouldn't." % root["mrk"]
+                
+                root["words"] = []
+                for art_child in vortaro_child.getchildren():
+                    if art_child.tag == "kap":
+                        # kap defines what the root word looks like.
+                        root["begining"], root["root"], root["ending"], root["ofc"] = self._parse_kap(vortaro_child.find("kap"))
+                        assert root is not None, "A kap, in art %s, is missing the root word." % root["mrk"]
+                        try:
+                            root["kind"] = self._infer_word_kind(root["begining"], root["root"].strip(), root["ending"])
+                        except UnknownWordType, e:
+                            root["kind"] = "unknown"
+                    
+                    elif art_child.tag in ["adm", "bld", "dif", "ekz", "fnt", "gra", "mlg", "ref", "refgrp", "rim", "snc", "subart", "tez", "tezrad", "trd", "trdgrp", "url", "uzo"]:
+                        continue # TODO: parse these tags.
+                    
+                    elif art_child.tag == "drv":
+                        word = {}
+                        word["mrk"], word["begining"], word["root"], word["ending"], word["kind"], word["ofc"] = self._parse_drv(art_child)
+                        word["word"] = word["begining"] + root["root"] + word["ending"]
+                        if word["root"].lit:
+                            word["word"] = word["root"].lit + word["word"][1:]
+                        root["words"].append(word)
+                    
+                    else:
+                        raise UnexpectedTag(art_child)
+                
+                roots.append(root)
             
-            print(u"root: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" %
-                  (root, begining, ending, kind, ofc))
-            
-            for drv in art.findall("drv"):
-                 mrk, begining, root, ending, kind, ofc = self._parse_drv(drv)
-                 
-                 word = begining + ro.root + ending
-                 if root.lit:
-                     word = root.lit + word[1:]
-                 print(u"\t\tword: %s" % word)
-                 wo = models.Word.objects.create(
-                     word=word,
-                     kind=kind,
-                     root=ro,
-                     begining=begining,
-                     ending=ending,
-                     ofc=ofc,
-                     mrk=mrk)
+            else:
+                raise UnexpectedTag(vortaro_child)
+        
+        return roots
     
     def _parse_drv(self, drv):
         mrk = drv.attrib["mrk"]
@@ -169,8 +202,7 @@ class Command(LabelCommand):
         except UnknownWordType, e:
             kind = ""
         
-        print(u"\troot: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" %
-              (root, begining, ending, kind, ofc))
+        self._log(2, u"\troot: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" % (root, begining, ending, kind, ofc))
         
         definitions = []
         for senco in drv.findall("snc"):
@@ -179,17 +211,24 @@ class Command(LabelCommand):
             dif = senco.find("dif")
             if dif is not None:
                 definition = self._parse_dif(senco.find("dif"))
-                print(u"\t\tdefinition: %s" % definition)
-
+                self._log(2, u"\t\tdefinition: %s" % definition)
+        
         return mrk, begining, root, ending, kind, ofc
     
     def _parse_dif(self, dif):
         definition = ""
         if dif.text is not None:
-            definition += dif.text.strip()
+            definition += dif.text
         for i in dif:
-            raise UnexpectedTag(i)
-        return definition
+            if i.tag == "ref":
+                if i.text is not None:
+                    definition += i.text
+                if i.tail is not None:
+                    definition += i.tail
+#                assert i.getchildren() == [], "A ref has a subtag."
+#            else:
+#                raise UnexpectedTag(i)
+        return definition.strip().replace("\n", " ")
     
     def _parse_kap(self, kap):
         begining = ""
@@ -295,3 +334,10 @@ class Command(LabelCommand):
             else:
                 raise UnknownWordType(begining, root, ending)
     
+    def _log(self, level, message):
+        """Print the message if the verbosity is greater or equal than the level."""
+        if self._verbosity >= level:
+            print(message)
+            return True
+        else:
+            return False
