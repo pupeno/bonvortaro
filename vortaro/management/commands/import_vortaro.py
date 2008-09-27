@@ -48,7 +48,10 @@ class TLD(object):
         self.lit = lit
     
     def __unicode__(self):
-        return self.lit
+        if self.lit is not None:
+            return self.lit
+        else:
+            return u""
 
 class Command(LabelCommand):
     help = "Import an xml or a set of xml from reta-vortaro."
@@ -146,6 +149,42 @@ class Command(LabelCommand):
                      ofc=ofc,
                      mrk=mrk)
     
+    def _parse_drv(self, drv):
+        mrk = drv.attrib["mrk"]
+        
+        assert len(drv.findall("kap")) == 1, "A drv has more than one kap."
+        begining, root, ending, ofc = self._parse_kap(drv.find("kap"))
+        assert isinstance(root, TLD), "Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (root, begining, ending)
+        
+        try:
+            kind = self._infer_word_kind(begining, root, ending)
+        except UnknownWordType, e:
+            kind = ""
+        
+        print(u"\troot: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" %
+              (root, begining, ending, kind, ofc))
+        
+        definitions = []
+        for senco in drv.findall("snc"):
+            global n
+            assert len(senco.findall("dif")) <= 1, "A snc, %s, has more than one dif." % senco.attrib["mrk"]
+            dif = senco.find("dif")
+            if dif is not None:
+                definition = self._parse_dif(senco.find("dif"))
+                print(u"\t\tdefinition: %s" % definition)
+
+        return mrk, begining, root, ending, kind, ofc
+    
+    def _parse_dif(self, dif):
+        definition = ""
+        if dif.text is not None:
+            definition += dif.text.strip()
+        for i in dif:
+            if i.text is not None:
+                definition += i.text.strip()
+            if i.tail is not None:
+                definition += i.tail.strip()
+    
     def _parse_kap(self, kap):
         begining = ""
         root = ""
@@ -196,23 +235,6 @@ class Command(LabelCommand):
             ending = "o"
         
         return begining, root, ending, ofc
-    
-    def _parse_drv(self, drv):
-        mrk = drv.attrib["mrk"]
-        
-        assert len(drv.findall("kap")) == 1, "A drv has more than one kap."
-        begining, root, ending, ofc = self._parse_kap(drv.find("kap"))
-        assert isinstance(root, TLD), "Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (root, begining, ending)
-        
-        try:
-            kind = self._infer_word_kind(begining, root, ending)
-        except UnknownWordType, e:
-            kind = ""
-        
-        print(u"\troot.lit: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" %
-              (root.lit, begining, ending, kind, ofc))
-
-        return mrk, begining, root, ending, kind, ofc
     
     def _infer_word_kind(self, begining, root, ending):
         #TODO: find out what this exceptions are.
@@ -267,3 +289,4 @@ class Command(LabelCommand):
                 return "adverb"
             else:
                 raise UnknownWordType(begining, root, ending)
+    
