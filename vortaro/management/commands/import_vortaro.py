@@ -184,6 +184,7 @@ class Command(LabelCommand):
                 definition += i.text.strip()
             if i.tail is not None:
                 definition += i.tail.strip()
+        return definition
     
     def _parse_kap(self, kap):
         begining = ""
