@@ -26,20 +26,18 @@ import re
 from vortaro import models
 
 class UnknownWordType(Exception):
-    def __init__(self, begining, root, ending):
-        self.begining = begining
-        self.root = root
-        self.ending = ending
+    def __init__(self, word):
+        self.word = word
     
     def __str__(self):
         return models._to_xsistemo(unicode(self))
     
     def __unicode__(self):
-        msg = "Word '%s'" % self.root
-        if self.begining is not None:
-            msg += ", begining with '%s'" % self.begining
-        if self.ending is not None:
-            msg += ", ending with '%s'" % self.ending
+        msg = "Word '%s'" % self.word["root"]
+        if self.word["begining"] is not None:
+            msg += ", begining with '%s'" % self.word["begining"]
+        if self.word["ending"] is not None:
+            msg += ", ending with '%s'" % self.word["ending"]
         msg += " is of unknown type."
         return msg
 
@@ -174,10 +172,7 @@ class Command(LabelCommand):
                         # kap defines what the root word looks like.
                         root.update(self._parse_kap(vortaro_child.find("kap")))
                         assert root["root"] is not None, "A kap, in art %s, is missing the root word." % root["mrk"]
-                        try:
-                            root["kind"] = self._infer_word_kind(root["begining"], root["root"].strip(), root["ending"])
-                        except UnknownWordType, e:
-                            root["kind"] = "unknown"
+                        root["kind"] = self._infer_word_kind(root)
                     
                     elif art_child.tag in ["adm", "bld", "dif", "ekz", "fnt",
                                            "gra", "mlg", "ref", "refgrp", "rim",
@@ -187,7 +182,7 @@ class Command(LabelCommand):
                     
                     elif art_child.tag == "drv":
                         word = {}
-                        word["mrk"], word["begining"], word["root"], word["ending"], word["kind"], word["ofc"] = self._parse_drv(art_child)
+                        word.update(self._parse_drv(art_child))
                         word["word"] = (word["begining"] + root["root"] +
                                         word["ending"])
                         if word["root"].lit:
@@ -216,10 +211,7 @@ class Command(LabelCommand):
         word.update(self._parse_kap(drv.find("kap")))
         assert isinstance(word["root"], TLD), "Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (word["root"], word["begining"], word["ending"])
         
-        try:
-            word["kind"] = self._infer_word_kind(word["begining"], word["root"], word["ending"])
-        except UnknownWordType, e:
-            word["kind"] = "unknown"
+        word["kind"] = self._infer_word_kind(word)
         
         self._log(2, u"\troot: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" % (word["root"], word["begining"], word["ending"], word["kind"], word["ofc"]))
         
@@ -231,7 +223,7 @@ class Command(LabelCommand):
                 definition = self._parse_dif(senco.find("dif"))
                 self._log(2, u"\t\tdefinition: %s" % definition)
         
-        return word["mrk"], word["begining"], word["root"], word["ending"], word["kind"], word["ofc"]
+        return word
     
     def _parse_dif(self, dif):
         definition = ""
@@ -306,66 +298,69 @@ class Command(LabelCommand):
         
         return word
     
-    def _infer_word_kind(self, begining, root, ending):
+    def _infer_word_kind(self, word):
         #TODO: find out what this exceptions are.
-        if isinstance(root, str):
-            if root in [u"plus"]:
+        if isinstance(word["root"], str):
+            if word["root"] in [u"plus"]:
                 return "mathematical operation"
-            elif root in [u"hodiaŭ"]:
+            elif word["root"] in [u"hodiaŭ"]:
                 return "time"
-            elif root in [u"kaj", u"ankaŭ", u"malgraŭ", u"ambaŭ", u"ĵus",
-                          u"preskaŭ", u"ĉu", u"sed", u"aŭ", u"da", u"de", u"el",
-                          u"la", u"en"]:
+            elif word["root"] in [u"kaj", u"ankaŭ", u"malgraŭ", u"ambaŭ", u"ĵus",
+                                  u"preskaŭ", u"ĉu", u"sed", u"aŭ", u"da", u"de", u"el",
+                                  u"la", u"en"]:
                 return "connector"
-            elif root in [u"unu", u"du", u"tri", u"kvar", u"kvin", u"ses",
-                          u"sep", u"ok", u"naŭ", u"dek", u"cent", u"mil"]:
+            elif word["root"] in [u"unu", u"du", u"tri", u"kvar", u"kvin", u"ses",
+                                  u"sep", u"ok", u"naŭ", u"dek", u"cent", u"mil"]:
                 return "number"
-            elif re.match(self._correlative_matcher, root):
+            elif re.match(self._correlative_matcher, word["root"]):
                 return "correlative"
-            elif root in [u"trans", u"ĝis", u"ĉe"]:
+            elif word["root"] in [u"trans", u"ĝis", u"ĉe"]:
                 return "preposition"
-            elif root in [u"mi", u"ni", u"ili", u"li", u"ŝi", u"ĝi", u"ĉi"]:
+            elif word["root"] in [u"mi", u"ni", u"ili", u"li", u"ŝi", u"ĝi", u"ĉi"]:
                 return "personal pronoun"
-            elif root in [u"ankoraŭ", u"almenaŭ", u"apenaŭ", u"baldaŭ",
-                          u"preskaŭ", u"eĉ", u"jam", u"jen", u"ĵus", u"morgaŭ",  # preskaŭ is repeated in a previous conditional.
-                          u"hodiaŭ", u"hieraŭ", u"nun", u"nur", u"plu", u"tre",
-                          u"tro", u"tuj", u"for", u"des", u"ĉi"]:
+            elif word["root"] in [u"ankoraŭ", u"almenaŭ", u"apenaŭ", u"baldaŭ",
+                                  u"preskaŭ", u"eĉ", u"jam", u"jen", u"ĵus", u"morgaŭ",  # preskaŭ is repeated in a previous conditional.
+                                  u"hodiaŭ", u"hieraŭ", u"nun", u"nur", u"plu", u"tre",
+                                  u"tro", u"tuj", u"for", u"des", u"ĉi"]:
                 return "adverb"
-            elif root in [u"Kabe", u"Singapur", u"Novjork", u"Peterburg",
-                          u"Toki", u"TTT", u"Kiev", u"Ĥarkov"]:
+            elif word["root"] in [u"Kabe", u"Singapur", u"Novjork", u"Peterburg",
+                                  u"Toki", u"TTT", u"Kiev", u"Ĥarkov"]:
                 return "name"
-            #elif root in [u"pum"]:
+            #elif word["root"] in [u"pum"]:
             #    return "who knows"
-            #elif root == u"ordinaci" and ending == u"/o, ordin/o":
-            #    ending = "/o"
-            #elif root == u"dis":
-            #    ending = "-"
-            #elif root == u"knid" and ending == u"/uloj":
-            #    root = "knidul"
-            #    ending = "/oj"
+            #elif word["root"] == u"ordinaci" and word["ending"] == u"/o, ordin/o":
+            #    word["ending"] = "/o"
+            #elif word["root"] == u"dis":
+            #    word["ending"] = "-"
+            #elif word["root"] == u"knid" and word["ending"] == u"/uloj":
+            #    word["root"] = "knidul"
+            #    word["ending"] = "/oj"
         
-        if begining == "-" and  isinstance(root, str):
-            if root in ["a", "e", "i", "o"]:
+        if word["begining"] == "-" and  isinstance(word["root"], str):
+            if word["root"] in ["a", "e", "i", "o"]:
                 return "possible ending letter"
-            elif len(root) >= 2 or (root == "i" and ending == "/"):
+            elif len(word["root"]) >= 2 or (word["root"] == "i" and word["ending"] == "/"):
                 return "suffix, likely"
         else:
-            if ending == "-":
+            if word["ending"] == "-":
                 return "prefix"
-            elif ending == "o":
+            elif word["ending"] == "o":
                 return "noun"
-            elif ending == "oj":
+            elif word["ending"] == "oj":
                 return "plural noun"
-            elif ending == "a":
+            elif word["ending"] == "a":
                 return "adjective"
-            elif ending == "aj":
+            elif word["ending"] == "aj":
                 return "plural adjective"
-            elif ending == "i":
+            elif word["ending"] == "i":
                 return "verb"
-            elif ending == "e":
+            elif word["ending"] == "e":
                 return "adverb"
             else:
-                raise UnknownWordType(begining, root, ending)
+                if self._exceptions:
+                    return "unknown"
+                else:
+                    raise UnknownWordType(word)
     
     def _log(self, level, message):
         """Print the message if the verbosity allows for it."""
