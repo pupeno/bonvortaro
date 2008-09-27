@@ -66,29 +66,33 @@ class Command(LabelCommand):
     args = "[datadir or datafile]"
     label = "data directory or file"
     
-    correlative_matcher = re.compile(u"(ĉ|k|nen|t)i(a|e|o|u|om)")
+    _correlative_matcher = re.compile(u"(ĉ|k|nen|t)i(a|e|o|u|om)")
+    _models = [models.Root, models.Word, models.Definition, models.Translation]
     
     requires_model_validation = True
     can_import_settings = True
     
     def __init__(self, *args, **kwargs):
         LabelCommand.__init__(self, *args, **kwargs)
-        self._verbosity = 1     # TODO: let an argument set this. Default to 1.
-        self._obliterate = True # TODO: let an argument set this. Default to None
-        self._parser = etree.XMLParser(load_dtd=True, remove_blank_text=True, remove_comments=True)
+        self._verbosity = 1 # TODO: let an argument set this. Default to 1.
+        self._delete = True # TODO: let an argument set this. Default to None.
+        self._parser = etree.XMLParser(
+            load_dtd=True, remove_blank_text=True, remove_comments=True)
     
     def handle_label(self, data_dir, **options):
-        if self._obliterate is None:
-            confirm = raw_input("Would you like to oblitarate the words table first? (yes/no): ")
+        if self._delete is None:
+            confirm = raw_input(
+                "Would you like to oblitarate the words table first?"
+                " (yes/no): ")
             while confirm not in ["yes", "no"]:
-                confirm = raw_input('Please enter either "yes" or "no": ')
+                confirm = raw_input("Please enter either \"yes\" or \"no\": ")
             if confirm == "yes":
-                this._obliterate = True
+                this._delete = True
             else:
-                this._obliterate = False
-        for table in [models.Root, models.Word, models.Definition, models.Translation]:
-            self._log(1, "Obliterating table for %s." % table)
-            table.objects.all().delete()
+                this._delete = False
+        for model in self._models:
+            self._log(1, "Deleting data on table for %s." % model)
+            model.objects.all().delete()
         
         problem_words = []
         
@@ -149,6 +153,11 @@ class Command(LabelCommand):
                 self._log(1, u"\t\tWord: %s." % wo)
     
     def _parse_vortaro(self, vortaro):
+        """Parse the root element, vortaro, generating a list of roots.
+
+        I think it's not likely or even possible to have more than one root in a
+        vortaro, but just in case, the code allows for it.
+        """
         roots = []
         for vortaro_child in vortaro.getchildren():
             if vortaro_child.tag == "art":
@@ -169,13 +178,17 @@ class Command(LabelCommand):
                         except UnknownWordType, e:
                             root["kind"] = "unknown"
                     
-                    elif art_child.tag in ["adm", "bld", "dif", "ekz", "fnt", "gra", "mlg", "ref", "refgrp", "rim", "snc", "subart", "tez", "tezrad", "trd", "trdgrp", "url", "uzo"]:
+                    elif art_child.tag in ["adm", "bld", "dif", "ekz", "fnt",
+                                           "gra", "mlg", "ref", "refgrp", "rim",
+                                           "snc", "subart", "tez", "tezrad",
+                                           "trd", "trdgrp", "url", "uzo"]:
                         continue # TODO: parse these tags.
                     
                     elif art_child.tag == "drv":
                         word = {}
                         word["mrk"], word["begining"], word["root"], word["ending"], word["kind"], word["ofc"] = self._parse_drv(art_child)
-                        word["word"] = word["begining"] + root["root"] + word["ending"]
+                        word["word"] = (word["begining"] + root["root"] +
+                                        word["ending"])
                         if word["root"].lit:
                             word["word"] = word["root"].lit + word["word"][1:]
                         root["words"].append(word)
@@ -206,7 +219,6 @@ class Command(LabelCommand):
         
         definitions = []
         for senco in drv.findall("snc"):
-            global n
             assert len(senco.findall("dif")) <= 1, "A snc, %s, has more than one dif." % senco.attrib["mrk"]
             dif = senco.find("dif")
             if dif is not None:
@@ -287,19 +299,26 @@ class Command(LabelCommand):
                 return "mathematical operation"
             elif root in [u"hodiaŭ"]:
                 return "time"
-            elif root in [u"kaj", u"ankaŭ", u"malgraŭ", u"ambaŭ", u"ĵus", u"preskaŭ", u"ĉu", u"sed", u"aŭ", u"da", u"de", u"el", u"la", u"en"]:
+            elif root in [u"kaj", u"ankaŭ", u"malgraŭ", u"ambaŭ", u"ĵus",
+                          u"preskaŭ", u"ĉu", u"sed", u"aŭ", u"da", u"de", u"el",
+                          u"la", u"en"]:
                 return "connector"
-            elif root in [u"unu", u"du", u"tri", u"kvar", u"kvin", u"ses", u"sep", u"ok", u"naŭ", u"dek", u"cent", u"mil"]:
+            elif root in [u"unu", u"du", u"tri", u"kvar", u"kvin", u"ses",
+                          u"sep", u"ok", u"naŭ", u"dek", u"cent", u"mil"]:
                 return "number"
-            elif re.match(self.correlative_matcher, root):
+            elif re.match(self._correlative_matcher, root):
                 return "correlative"
             elif root in [u"trans", u"ĝis", u"ĉe"]:
                 return "preposition"
             elif root in [u"mi", u"ni", u"ili", u"li", u"ŝi", u"ĝi", u"ĉi"]:
                 return "personal pronoun"
-            elif root in [u"ankoraŭ", u"almenaŭ", u"apenaŭ", u"baldaŭ", u"preskaŭ", u"eĉ", u"jam", u"jen", u"ĵus", u"morgaŭ", u"hodiaŭ", u"hieraŭ", u"nun", u"nur", u"plu", u"tre", u"tro", u"tuj", u"for",    u"des", u"ĉi"]:
+            elif root in [u"ankoraŭ", u"almenaŭ", u"apenaŭ", u"baldaŭ",
+                          u"preskaŭ", u"eĉ", u"jam", u"jen", u"ĵus", u"morgaŭ",  # preskaŭ is repeated in a previous conditional.
+                          u"hodiaŭ", u"hieraŭ", u"nun", u"nur", u"plu", u"tre",
+                          u"tro", u"tuj", u"for", u"des", u"ĉi"]:
                 return "adverb"
-            elif root in [u"Kabe", u"Singapur", u"Novjork", u"Peterburg", u"Toki", u"TTT", u"Kiev", u"Ĥarkov"]:
+            elif root in [u"Kabe", u"Singapur", u"Novjork", u"Peterburg",
+                          u"Toki", u"TTT", u"Kiev", u"Ĥarkov"]:
                 return "name"
             #elif root in [u"pum"]:
             #    return "who knows"
@@ -335,7 +354,7 @@ class Command(LabelCommand):
                 raise UnknownWordType(begining, root, ending)
     
     def _log(self, level, message):
-        """Print the message if the verbosity is greater or equal than the level."""
+        """Print the message if the verbosity allows for it."""
         if self._verbosity >= level:
             print(message)
             return True
