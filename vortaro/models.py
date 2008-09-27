@@ -86,3 +86,12 @@ class Word(models.Model):
 
     def link_to_retavortaro(self):
         return "http://reta-vortaro.de/revo/art/%s.html#%s" % (_to_xsistemo(self.root.root), self.mrk)
+
+class Definition(models.Model):
+    word = models.ForeignKey(Word)
+    definition = models.TextField()
+
+class Translation(models.Model):
+    word = models.ForeignKey(Word)
+    language = models.CharField(max_length=3)
+    translation = models.CharField(max_length=100)
