@@ -205,20 +205,25 @@ class Command(LabelCommand):
         return roots
     
     def _parse_drv(self, drv):
-        mrk = drv.attrib["mrk"]
+        """Parse a drv tag.
+        
+        The result of a drv tag is a word with a bunch of properties."""
+        
+        word = {}
+        word["mrk"] = drv.attrib["mrk"]
         
         assert len(drv.findall("kap")) == 1, "A drv has more than one kap."
-        begining, root, ending, ofc = self._parse_kap(drv.find("kap"))
-        assert isinstance(root, TLD), "Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (root, begining, ending)
+        word["begining"], word["root"], word["ending"], word["ofc"] = self._parse_kap(drv.find("kap"))
+        assert isinstance(word["root"], TLD), "Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (word["root"], word["begining"], word["ending"])
         
         try:
-            kind = self._infer_word_kind(begining, root, ending)
+            word["kind"] = self._infer_word_kind(word["begining"], word["root"], word["ending"])
         except UnknownWordType, e:
-            kind = ""
+            word["kind"] = "unknown"
         
-        self._log(2, u"\troot: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" % (root, begining, ending, kind, ofc))
+        self._log(2, u"\troot: %s\tbegining: %s\tending: %s\ttype: %s\tofc: %s" % (word["root"], word["begining"], word["ending"], word["kind"], word["ofc"]))
         
-        definitions = []
+        word["definitions"] = []
         for senco in drv.findall("snc"):
             assert len(senco.findall("dif")) <= 1, "A snc, %s, has more than one dif." % senco.attrib["mrk"]
             dif = senco.find("dif")
@@ -226,7 +231,7 @@ class Command(LabelCommand):
                 definition = self._parse_dif(senco.find("dif"))
                 self._log(2, u"\t\tdefinition: %s" % definition)
         
-        return mrk, begining, root, ending, kind, ofc
+        return word["mrk"], word["begining"], word["root"], word["ending"], word["kind"], word["ofc"]
     
     def _parse_dif(self, dif):
         definition = ""
