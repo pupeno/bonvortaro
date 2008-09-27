@@ -74,8 +74,9 @@ class Command(LabelCommand):
     
     def __init__(self, *args, **kwargs):
         LabelCommand.__init__(self, *args, **kwargs)
-        self._verbosity = 1 # TODO: let an argument set this. Default to 1.
-        self._delete = True # TODO: let an argument set this. Default to None.
+        self._verbosity = 1     # TODO: let an argument set this. Default to 1.
+        self._delete = True     # TODO: let an argument set this. Default to None.
+        self._exceptions = True # TODO: let an argument set this. Default to True.
         self._parser = etree.XMLParser(
             load_dtd=True, remove_blank_text=True, remove_comments=True)
     
@@ -274,21 +275,22 @@ class Command(LabelCommand):
                 raise UnexpectedTag(i)
         
         if ending and ending[0] == "/":
-            ending = ending [1:]
+            ending = ending[1:]
         
         # Handle exceptions
-        if begining == "ilo" and root == "":
-            begining = ""
-            root = TLD()
-            ending = "o"
-        elif begining == u"nedaŭra planto" and root == "":
-            begining = u"nedaŭra"
-            root = TLD()
-            ending = "o"
-        elif begining == u"naĝoveziko,":
-            begining = u"naĝo"
-            root = TLD()
-            ending = "o"
+        if self._exceptions:
+            if begining == "ilo" and root == "":
+                begining = ""
+                root = TLD()
+                ending = "o"
+            elif begining == u"nedaŭra planto" and root == "":
+                begining = u"nedaŭra"
+                root = TLD()
+                ending = "o"
+            elif begining == u"naĝoveziko,":
+                begining = u"naĝo"
+                root = TLD()
+                ending = "o"
         
         return begining, root, ending, ofc
     
