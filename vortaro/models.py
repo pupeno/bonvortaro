@@ -91,7 +91,13 @@ class Definition(models.Model):
     word = models.ForeignKey(Word)
     definition = models.TextField()
 
+    def __unicode__(self):
+        return self.definition
+
 class Translation(models.Model):
-    word = models.ForeignKey(Word)
+    definition = models.ForeignKey(Definition)
     language = models.CharField(max_length=3)
     translation = models.CharField(max_length=100)
+
+    def __unicode__(self):
+        return u"%s %s" % (self.language, self.translation)
