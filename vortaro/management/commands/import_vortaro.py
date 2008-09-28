@@ -76,7 +76,7 @@ class Command(LabelCommand):
         self._delete = True     # TODO: let an argument set this. Default to None.
         self._exceptions = True # TODO: let an argument set this. Default to True.
         self._parser = etree.XMLParser(
-            load_dtd=True, remove_blank_text=True, remove_comments=True)
+            load_dtd=True, remove_comments=True)
     
     def handle_label(self, data_dir, **options):
         if self._delete is None:
@@ -93,14 +93,15 @@ class Command(LabelCommand):
             self._log(1, "Deleting data on table for %s." % model)
             model.objects.all().delete()
         
-        problem_words = []
+        problems = []
         
         def import_file(filename):
             """Import a file and keep track of the problematic words."""
             try:
                 self.import_file(filename)
             except Exception, e:
-                problem_words.append(e)
+                problems.append(e)
+                print(e)
         
         # If it is a directory, import all the XML filse inside it, otherwise,
         # just import the file.
@@ -117,10 +118,10 @@ class Command(LabelCommand):
         # Done.
         self._log(0, "Done.")
         # Report the problematic words, if any.
-        for word in problem_words:
-            self._log(0, unicode(word))
-        if len(problem_words) > 1:
-            self._log(0, "%s problem words." % len(problem_words))
+        for problem in problems:
+            self._log(0, unicode(problem))
+        if len(problems) > 1:
+            self._log(0, "%s problems." % len(problems))
     
     def import_file(self, filename):
         """Import an individual filename, turning the XML into records."""
@@ -150,7 +151,17 @@ class Command(LabelCommand):
                     ofc=word["ofc"],
                     mrk=word["mrk"])
                 self._log(1, u"\t\tWord: %s." % wo)
-    
+                for definition in word["definitions"]:
+                    de = models.Definition.objects.create(
+                        word=wo,
+                        definition=definition["definition"])
+                    self._log(1, u"\t\t\tDefinition: %s" % str(de).split("\n")[0])
+                    for translation in definition["translations"]:
+                        tr = models.Translation.objects.create(
+                            definition=de,
+                            language=translation["language"],
+                            translation=translation["translation"])
+                        self._log(1, u"\t\t\t\tTranslation: %s." % tr)
     def _parse_vortaro(self, vortaro):
         """Parse the root element, vortaro, generating a list of roots.
 
@@ -218,27 +229,70 @@ class Command(LabelCommand):
         word["definitions"] = []
         for senco in drv.findall("snc"):
             assert len(senco.findall("dif")) <= 1, "A snc, %s, has more than one dif." % senco.attrib["mrk"]
-            dif = senco.find("dif")
-            if dif is not None:
-                definition = self._parse_dif(senco.find("dif"))
-                self._log(2, u"\t\tdefinition: %s" % definition)
-        
+            definition = {
+                "definition": "",
+                "translations": []
+            }
+            for senco_child in senco:
+                if senco_child.tag == "dif":
+                    definition["definition"] = self._parse_dif(
+                        senco_child, word["root"])
+                elif senco_child.tag == "trd":
+                    try:
+                        language = senco_child.attrib["lng"]
+                    except KeyError, e:
+                        raise Exception("%s has no lang: %s." % (etree.tostring(senco_child), e), e)
+                    
+                    translation = ""
+                    if senco_child.text is not None:
+                        translation += senco_child.text.strip()
+                    for trd_child in senco_child:
+                        if trd_child.tag == "ind":
+                            if trd_child.text is not None:
+                                translation += trd_child.text
+                            else:
+                                UnexpectedTag(trd_child)
+                        if trd_child.tail is not None:
+                            translation += trd_child.tail
+                    
+                    translation = {
+                        "language": senco_child.attrib["lng"],
+                        "translation": translation
+                    }
+                    definition["translations"].append(translation)
+            word["definitions"].append(definition)
         return word
     
-    def _parse_dif(self, dif):
-        definition = ""
-        if dif.text is not None:
-            definition += dif.text
-        for i in dif:
-            if i.tag == "ref":
-                if i.text is not None:
-                    definition += i.text
-                if i.tail is not None:
-                    definition += i.tail
-#                assert i.getchildren() == [], "A ref has a subtag."
-#            else:
-#                raise UnexpectedTag(i)
-        return definition.strip().replace("\n", " ")
+    def _parse_dif(self, dif, tld=None):
+        """TODO"""
+        return etree.tostring(dif)
+        ##definition = ""
+        ## if dif.text is not None:
+        ##     definition += dif.text
+        ## for dif_child in dif:
+        ##     if dif_child.tag == "ref":
+        ##         if dif_child.text is not None:
+        ##             definition += dif_child.text # TODO: link to the word.
+        ##         if dif_child.tail is not None:
+        ##             definition += dif_child.tail
+        ##         assert dif_child.getchildren() == [], "A ref has a subtag."
+            
+        ##     elif dif_child.tag == "ekz":
+        ##         definition += self._parse_ekz(dif_child).strip()
+        ##         if dif_child.tail is not None:
+        ##             definition += dif_child.tail
+
+        ##     elif dif_child.tag == "tld":
+        ##         if tld is None:
+        ##             raise Exception("TLD required to parse dif: %s" % etree.tostring(dif))
+                
+        ##     else:
+        ##         raise UnexpectedTag(dif_child)
+        ## return definition.strip().replace("\n", " ")
+
+    def _parse_ekz(self, ekz):
+        """Parse an ekz element. TODO: do something useful."""
+        return ekz.text
     
     def _parse_kap(self, kap):
         """Parse a kap element.
