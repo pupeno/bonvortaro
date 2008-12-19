@@ -65,7 +65,7 @@ class Command(LabelCommand):
     label = "data directory or file"
     
     _correlative_matcher = re.compile(u"(ĉ|k|nen|t)i(a|e|o|u|om)")
-    _models = [models.Root, models.Word, models.Definition, models.Translation]
+    _models = [models.Root, models.Word, models.Definition] #, models.Translation]
     
     requires_model_validation = True
     can_import_settings = True
@@ -156,7 +156,7 @@ class Command(LabelCommand):
                     de = models.Definition.objects.create(
                         word=wo,
                         definition=definition["definition"])
-                    self._log(1, u"\t\t\tDefinition: %s" % str(de).split("\n")[0])
+                    self._log(1, u"\t\t\tDefinition: %s" % de)
                     for translation in definition["translations"]:
                         tr = models.Word.objects.create(
                             language=translation["language"],
@@ -266,7 +266,7 @@ class Command(LabelCommand):
     
     def _parse_dif(self, dif, tld=None):
         """TODO"""
-        return etree.tostring(dif)
+        return dif.text.strip()
         ##definition = ""
         ## if dif.text is not None:
         ##     definition += dif.text
