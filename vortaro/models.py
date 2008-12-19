@@ -70,7 +70,8 @@ class Root(models.Model):
         return self.root
 
 class Word(models.Model):
-    root = models.ForeignKey(Root)
+    language = models.CharField(max_length=3)
+    root = models.ForeignKey(Root, blank=True, null=True)
     word = models.CharField(max_length=70)
     kind = models.CharField(max_length=70, blank=True) #, choices=WORD_TYPES)
     
@@ -93,11 +94,3 @@ class Definition(models.Model):
 
     def __unicode__(self):
         return self.definition
-
-class Translation(models.Model):
-    definition = models.ForeignKey(Definition)
-    language = models.CharField(max_length=3)
-    translation = models.CharField(max_length=100)
-
-    def __unicode__(self):
-        return u"%s %s" % (self.language, self.translation)

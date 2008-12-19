@@ -109,7 +109,7 @@ class Command(LabelCommand):
             filenames = glob.glob(os.path.join(data_dir, "*.xml"))
             filenames.sort()
             for filename in filenames:
-                import_file(filename)
+                self.import_file(filename)
             else:
                 print("No file found on '%s'." % filename)
         else:
@@ -143,6 +143,7 @@ class Command(LabelCommand):
 
             for word in root["words"]:
                 wo = models.Word.objects.create(
+                    language="eo",
                     root=ro,
                     word=word["word"],
                     kind=word["kind"],
@@ -157,11 +158,11 @@ class Command(LabelCommand):
                         definition=definition["definition"])
                     self._log(1, u"\t\t\tDefinition: %s" % str(de).split("\n")[0])
                     for translation in definition["translations"]:
-                        tr = models.Translation.objects.create(
-                            definition=de,
+                        tr = models.Word.objects.create(
                             language=translation["language"],
-                            translation=translation["translation"])
+                            word=translation["translation"])
                         self._log(1, u"\t\t\t\tTranslation: %s." % tr)
+    
     def _parse_vortaro(self, vortaro):
         """Parse the root element, vortaro, generating a list of roots.
 
@@ -309,7 +310,7 @@ class Command(LabelCommand):
         }
         
         if kap.text:
-            word["begining"] = kap.text.strip()
+            word["begining"] += kap.text.strip()
         for i in kap:
             if i.tag == "ofc":
                 word["ofc"] = i.text or ""

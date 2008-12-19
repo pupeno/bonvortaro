@@ -8,8 +8,8 @@ class RootAdmin(admin.ModelAdmin):
 admin.site.register(Root, RootAdmin)
 
 class WordAdmin(admin.ModelAdmin):
-    list_display = ["word", "kind", "begining", "root", "ending", "ofc", "mrk"]
-    list_filter = ["ending", "kind", "ofc", "begining"]
+    list_display = ["language", "word", "kind", "begining", "root", "ending", "ofc", "mrk"]
+    list_filter = ["ending", "kind", "ofc", "begining", "language"]
 
 admin.site.register(Word, WordAdmin)
 
@@ -17,11 +17,3 @@ class DefinitionAdmin(admin.ModelAdmin):
     list_display = ["word", "definition"]
 
 admin.site.register(Definition, DefinitionAdmin)
-
-class TranslationAdmin(admin.ModelAdmin):
-     list_display = ["word", "language", "translation"]
-
-     def word(self, translation):
-         return translation.definition.word
-
-admin.site.register(Translation, TranslationAdmin)
