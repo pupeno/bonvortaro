@@ -65,7 +65,7 @@ class Command(LabelCommand):
     label = "data directory or file"
     
     _correlative_matcher = re.compile(u"(ĉ|k|nen|t)i(a|e|o|u|om)")
-    _models = [models.Root, models.Word, models.Definition] #, models.Translation]
+    _models = [models.Root, models.Word, models.Definition]
     
     requires_model_validation = True
     can_import_settings = True
@@ -268,29 +268,6 @@ class Command(LabelCommand):
     def _parse_dif(self, dif, tld=None):
         """TODO"""
         return self._element_to_string(dif).strip()
-        ## definition = ""
-        ## if dif.text is not None:
-        ##     definition += dif.text
-        ## for dif_child in dif:
-        ##     if dif_child.tag == "ref":
-        ##         if dif_child.text is not None:
-        ##             definition += dif_child.text # TODO: link to the word.
-        ##         if dif_child.tail is not None:
-        ##             definition += dif_child.tail
-        ##         assert dif_child.getchildren() == [], "A ref has a subtag."
-            
-        ##     elif dif_child.tag == "ekz":
-        ##         definition += self._parse_ekz(dif_child).strip()
-        ##         if dif_child.tail is not None:
-        ##             definition += dif_child.tail
-
-        ##     elif dif_child.tag == "tld":
-        ##         if tld is None:
-        ##             raise Exception("TLD required to parse dif: %s" % etree.tostring(dif))
-                
-        ##     else:
-        ##         raise UnexpectedTag(dif_child)
-        ## return definition.strip().replace("\n", " ")
 
     def _parse_ekz(self, ekz):
         """Parse an ekz element. TODO: do something useful."""
@@ -392,7 +369,7 @@ class Command(LabelCommand):
             #    word["root"] = "knidul"
             #    word["ending"] = "/oj"
         
-        if word["begining"] == "-" and  isinstance(word["root"], str):
+        if word["begining"] == "-" and isinstance(word["root"], str):
             if word["root"] in ["a", "e", "i", "o"]:
                 return "possible ending letter"
             elif len(word["root"]) >= 2 or (word["root"] == "i" and word["ending"] == "/"):
