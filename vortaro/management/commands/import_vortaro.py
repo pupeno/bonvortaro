@@ -335,30 +335,30 @@ class Command(LabelCommand):
         #TODO: find out what this exceptions are.
         if isinstance(word["root"], str):
             if word["root"] in [u"plus"]:
-                return "mathematical operation"
+                return "-mathematical operation"
             elif word["root"] in [u"hodiaŭ"]:
-                return "time"
+                return "-time"
             elif word["root"] in [u"kaj", u"ankaŭ", u"malgraŭ", u"ambaŭ", u"ĵus",
                                   u"preskaŭ", u"ĉu", u"sed", u"aŭ", u"da", u"de", u"el",
                                   u"la", u"en"]:
-                return "connector"
+                return "-connector"
             elif word["root"] in [u"unu", u"du", u"tri", u"kvar", u"kvin", u"ses",
                                   u"sep", u"ok", u"naŭ", u"dek", u"cent", u"mil"]:
-                return "number"
+                return "-number"
             elif re.match(self._correlative_matcher, word["root"]):
-                return "correlative"
+                return "-correlative"
             elif word["root"] in [u"trans", u"ĝis", u"ĉe"]:
-                return "preposition"
+                return "-preposition"
             elif word["root"] in [u"mi", u"ni", u"ili", u"li", u"ŝi", u"ĝi", u"ĉi"]:
-                return "personal pronoun"
+                return "-personal pronoun"
             elif word["root"] in [u"ankoraŭ", u"almenaŭ", u"apenaŭ", u"baldaŭ",
                                   u"preskaŭ", u"eĉ", u"jam", u"jen", u"ĵus", u"morgaŭ",  # preskaŭ is repeated in a previous conditional.
                                   u"hodiaŭ", u"hieraŭ", u"nun", u"nur", u"plu", u"tre",
                                   u"tro", u"tuj", u"for", u"des", u"ĉi"]:
-                return "adverb"
+                return "-adverb"
             elif word["root"] in [u"Kabe", u"Singapur", u"Novjork", u"Peterburg",
                                   u"Toki", u"TTT", u"Kiev", u"Ĥarkov"]:
-                return "name"
+                return "-name"
             #elif word["root"] in [u"pum"]:
             #    return "who knows"
             #elif word["root"] == u"ordinaci" and word["ending"] == u"/o, ordin/o":
