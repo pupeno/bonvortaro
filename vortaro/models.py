@@ -85,7 +85,8 @@ class Word(models.Model):
     def __unicode__(self):
         return self.word
 
-    def link_to_retavortaro(self):
+    def revo_url(self):
+        """Returns the URL for this word in Reta Vortaro."""
         return "http://reta-vortaro.de/revo/art/%s.html#%s" % (_to_xsistemo(self.root.root), self.mrk)
 
 class Definition(models.Model):
