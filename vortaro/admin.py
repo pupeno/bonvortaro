@@ -1,4 +1,4 @@
-from bonvortaro.vortaro.models import Root, Word, Definition, Translation
+from bonvortaro.vortaro.models import Root, Word, Definition #, Translation
 from django.contrib import admin
 
 class RootAdmin(admin.ModelAdmin):
