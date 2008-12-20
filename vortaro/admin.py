@@ -9,7 +9,7 @@ admin.site.register(Root, RootAdmin)
 
 class WordAdmin(admin.ModelAdmin):
     list_display = ["language", "word", "kind", "begining", "root", "ending", "ofc", "mrk", "revo_link"]
-    list_filter = ["ending", "kind", "ofc", "begining", "language"]
+    list_filter = ["kind", "ofc", "language", "ending", "begining"]
     
     def revo_link(self, word):
         return "<a href=\"%s\">%s</a>" % (word.revo_url(), word.revo_url())
