@@ -111,7 +111,7 @@ class Command(LabelCommand):
             for filename in filenames:
                 self.import_file(filename)
             else:
-                print("No file found on '%s'." % filename)
+                print("No xml file found on '%s'." % data_dir)
         else:
             import_file(data_dir)
         
