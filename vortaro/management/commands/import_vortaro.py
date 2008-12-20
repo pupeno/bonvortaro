@@ -266,8 +266,8 @@ class Command(LabelCommand):
     
     def _parse_dif(self, dif, tld=None):
         """TODO"""
-        return dif.text.strip()
-        ##definition = ""
+        return self._element_to_string(dif).strip()
+        ## definition = ""
         ## if dif.text is not None:
         ##     definition += dif.text
         ## for dif_child in dif:
@@ -424,3 +424,11 @@ class Command(LabelCommand):
             return True
         else:
             return False
+
+    @staticmethod
+    def _element_to_string(element):
+        s = element.text
+        for sub_element in element:
+            s += etree.tostring(sub_element)
+        s += element.tail
+        return s
