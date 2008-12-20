@@ -108,8 +108,9 @@ class Command(LabelCommand):
         if os.path.isdir(data_dir):
             filenames = glob.glob(os.path.join(data_dir, "*.xml"))
             filenames.sort()
-            for filename in filenames:
-                self.import_file(filename)
+            if filenames:
+                for filename in filenames:
+                    self.import_file(filename)
             else:
                 print("No xml file found on '%s'." % data_dir)
         else:
