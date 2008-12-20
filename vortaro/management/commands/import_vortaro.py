@@ -427,7 +427,7 @@ class Command(LabelCommand):
 
     @staticmethod
     def _element_to_string(element):
-        s = element.text
+        s = element.text or ""
         for sub_element in element:
             s += etree.tostring(sub_element)
         s += element.tail
