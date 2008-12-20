@@ -377,17 +377,17 @@ class Command(LabelCommand):
         else:
             if word["ending"] == "-":
                 return "prefix"
-            elif word["ending"] == "o":
+            elif word["ending"][-1:] == "o":
                 return "noun"
-            elif word["ending"] == "oj":
+            elif word["ending"][-2:] == "oj":
                 return "plural noun"
-            elif word["ending"] == "a":
+            elif word["ending"][-1:] == "a":
                 return "adjective"
-            elif word["ending"] == "aj":
+            elif word["ending"][-2:] == "aj":
                 return "plural adjective"
-            elif word["ending"] == "i":
+            elif word["ending"][-1:] == "i":
                 return "verb"
-            elif word["ending"] == "e":
+            elif word["ending"][-1:] == "e":
                 return "adverb"
             else:
                 if self._exceptions:
