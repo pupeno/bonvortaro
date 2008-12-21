@@ -87,7 +87,6 @@ class Command(LabelCommand):
         self._parser = etree.XMLParser(
             load_dtd=True, remove_comments=True)
         self._problems = []
-        self._new_problems = []
     
     def handle_label(self, data_dir, **options):
         if self._delete is None:
@@ -110,7 +109,7 @@ class Command(LabelCommand):
             try:
                 self.import_file(filename)
             except WordException, e:
-                self._problems.append((e, filename))
+                self._add_problem(e, filename)
                 self._log(0, e)
         
         # If it is a directory, import all the XML filse inside it, otherwise,
@@ -152,7 +151,7 @@ class Command(LabelCommand):
                 mrk = root["mrk"])
             self._log(1, "\tRoot: %s." % ro)
             if root["var"] is not None:
-                self._log(2, u"\t\tIgnored variation: %s" % root["var"])
+                raise Exception(u"Ignored variation: %s" % root["var"])
 
             for word in root["words"]:
                 wo = models.Word.objects.create(
@@ -166,8 +165,10 @@ class Command(LabelCommand):
                     mrk=word["mrk"])
                 self._log(1, u"\t\tWord: %s." % wo)
                 if word["var"] is not None:
-                    self._log(2, u"\t\t\tIgnored variation: %s" % word["var"])
-
+                    message = u"Ignored variation: %s" % word["var"]
+                    self._log(2, "\t\t\t" + message)
+                    self._add_problem(message, filename)
+                
                 for definition in word["definitions"]:
                     de = models.Definition.objects.create(
                         word=wo,
@@ -436,6 +437,9 @@ class Command(LabelCommand):
     def _parse_xml(self, filename):
         """Parse an XML file using the custom configured self parser."""
         return etree.parse(filename, self._parser)
+    
+    def _add_problem(self, message, filename):
+        self._problems.append((message, filename))
     
     @staticmethod
     def _element_to_string(element):
