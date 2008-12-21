@@ -138,8 +138,8 @@ class Command(LabelCommand):
         """Import an individual filename, turning the XML into records."""
         
         self._log(1, "Importing data from '%s'." % filename)
-        
-        xmltree = etree.parse(filename, self._parser)
+    
+        xmltree = self._parse_xml(filename)
         roots = self._parse_vortaro(xmltree.getroot())
         
         for root in roots:
@@ -433,10 +433,15 @@ class Command(LabelCommand):
         else:
             return False
 
+    def _parse_xml(self, filename):
+        """Parse an XML file using the custom configured self parser."""
+        return etree.parse(filename, self._parser)
+    
     @staticmethod
     def _element_to_string(element):
+        """Return the text of the contents of an element (without the tag)."""
         s = element.text or ""
         for sub_element in element:
             s += etree.tostring(sub_element)
-        s += element.tail
+        s += element.tail or ""
         return s
