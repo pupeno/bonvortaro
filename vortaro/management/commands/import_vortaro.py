@@ -25,7 +25,16 @@ import re
 
 from vortaro import models
 
-class UnknownWordType(Exception):
+class WordException(Exception):
+    """Exception that means the program is missinterpreting a file or a file is corrupt. It won't halt the process and it will be reported at the end in a batch."""
+    
+    def __str__(self):
+        return models._to_xsistemo(unicode(self))
+    
+    def __unicode__(self):
+        return self.message
+
+class UnknownWordType(WordException):
     def __init__(self, word):
         self.word = word
     
@@ -41,7 +50,7 @@ class UnknownWordType(Exception):
         msg += " is of unknown type."
         return msg
 
-class UnexpectedTag(Exception):
+class UnexpectedTag(WordException):
     def __init__(self, tag):
         self.tag = tag
     
@@ -77,6 +86,8 @@ class Command(LabelCommand):
         self._exceptions = True # TODO: let an argument set this. Default to True.
         self._parser = etree.XMLParser(
             load_dtd=True, remove_comments=True)
+        self._problems = []
+        self._new_problems = []
     
     def handle_label(self, data_dir, **options):
         if self._delete is None:
@@ -93,15 +104,14 @@ class Command(LabelCommand):
             self._log(1, "Deleting data on table for %s." % model)
             model.objects.all().delete()
         
-        problems = []
         
-        def import_file(filename):
+        def import_file_recording_problems(filename):
             """Import a file and keep track of the problematic words."""
             try:
                 self.import_file(filename)
-            except Exception, e:
-                problems.append(e)
-                print(e)
+            except WordException, e:
+                self._problems.append((e, filename))
+                self._log(0, e)
         
         # If it is a directory, import all the XML filse inside it, otherwise,
         # just import the file.
@@ -110,19 +120,19 @@ class Command(LabelCommand):
             filenames.sort()
             if filenames:
                 for filename in filenames:
-                    self.import_file(filename)
+                    import_file_recording_problems(filename)
             else:
-                print("No xml file found on '%s'." % data_dir)
+                self._log(0, "No xml file found on '%s'." % data_dir)
         else:
-            import_file(data_dir)
+            import_file_recording_problems(data_dir)
         
         # Done.
         self._log(0, "Done.")
         # Report the problematic words, if any.
-        for problem in problems:
-            self._log(0, unicode(problem))
-        if len(problems) > 1:
-            self._log(0, "%s problems." % len(problems))
+        for problem in self._problems:
+            self._log(0, u"%s in file %s" % (unicode(problem[0]), problem[1]))
+        if len(self._problems) > 1:
+            self._log(0, u"%s problems." % len(self._problems))
     
     def import_file(self, filename):
         """Import an individual filename, turning the XML into records."""
@@ -141,6 +151,8 @@ class Command(LabelCommand):
                 ofc = root["ofc"],
                 mrk = root["mrk"])
             self._log(1, "\tRoot: %s." % ro)
+            if root["var"] is not None:
+                self._log(2, u"\t\tIgnored variation: %s" % root["var"])
 
             for word in root["words"]:
                 wo = models.Word.objects.create(
@@ -153,11 +165,15 @@ class Command(LabelCommand):
                     ofc=word["ofc"],
                     mrk=word["mrk"])
                 self._log(1, u"\t\tWord: %s." % wo)
+                if word["var"] is not None:
+                    self._log(2, u"\t\t\tIgnored variation: %s" % word["var"])
+
                 for definition in word["definitions"]:
                     de = models.Definition.objects.create(
                         word=wo,
                         definition=definition["definition"])
                     self._log(1, u"\t\t\tDefinition: %s" % de)
+
                     for translation in definition["translations"]:
                         tr = models.Word.objects.create(
                             language=translation["language"],
@@ -177,14 +193,14 @@ class Command(LabelCommand):
                 root = {}
                 root["mrk"] = vortaro_child.attrib["mrk"]
                 # which must have only one kap.
-                assert len(vortaro_child.findall("kap")) == 1, "An art, %s, has more than one kap, when it shouldn't." % root["mrk"]
+                assert len(vortaro_child.findall("kap")) == 1, u"An art, %s, has more than one kap, when it shouldn't." % root["mrk"]
                 
                 root["words"] = []
                 for art_child in vortaro_child.getchildren():
                     if art_child.tag == "kap":
                         # kap defines what the root word looks like.
                         root.update(self._parse_kap(vortaro_child.find("kap")))
-                        assert root["root"] is not None, "A kap, in art %s, is missing the root word." % root["mrk"]
+                        assert root["root"] is not None, u"A kap, in art %s, is missing the root word." % root["mrk"]
                         root["kind"] = self._infer_word_kind(root)
                     
                     elif art_child.tag in ["adm", "bld", "dif", "ekz", "fnt",
@@ -220,9 +236,10 @@ class Command(LabelCommand):
         word = {}
         word["mrk"] = drv.attrib["mrk"]
         
-        assert len(drv.findall("kap")) == 1, "A drv has more than one kap."
+        assert len(drv.findall("kap")) == 1, u"A drv has more than one kap."
         word.update(self._parse_kap(drv.find("kap")))
-        assert isinstance(word["root"], TLD), "Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (word["root"], word["begining"], word["ending"])
+        if not isinstance(word["root"], TLD):
+            raise WordException(u"Found spurious root word, '%s', in kap in drv, with begining: '%s' and ending: '%s'." % (word["root"], word["begining"], word["ending"]))
         
         word["kind"] = self._infer_word_kind(word)
         
@@ -230,7 +247,7 @@ class Command(LabelCommand):
         
         word["definitions"] = []
         for senco in drv.findall("snc"):
-            assert len(senco.findall("dif")) <= 1, "A snc, %s, has more than one dif." % senco.attrib["mrk"]
+            assert len(senco.findall("dif")) <= 1, u"A snc, %s, has more than one dif." % senco.attrib["mrk"]
             definition = {
                 "definition": "",
                 "translations": []
@@ -243,7 +260,7 @@ class Command(LabelCommand):
                     try:
                         language = senco_child.attrib["lng"]
                     except KeyError, e:
-                        raise Exception("%s has no lang: %s." % (etree.tostring(senco_child), e), e)
+                        raise WordException(u"%s has no lang: %s." % (etree.tostring(senco_child), e), e)
                     
                     translation = ""
                     if senco_child.text is not None:
@@ -285,49 +302,62 @@ class Command(LabelCommand):
             "ending": "",
             "ofc": "",
             #fnt: "",
+            "var": None,
         }
         
         if kap.text:
             word["begining"] += kap.text.strip()
-        for i in kap:
-            if i.tag == "ofc":
-                word["ofc"] = i.text or ""
-                if i.tail and i.tail.strip():
-                    word["begining"] += i.tail.strip()
-            elif i.tag == "rad" or i.tag == "tld":
-                if i.tag == "rad":
-                    word["root"] = i.text.strip()
+        for kap_sub in kap:
+            if kap_sub.tag == "ofc":
+                word["ofc"] = kap_sub.text or ""
+                if kap_sub.tail and kap_sub.tail.strip():
+                    word["begining"] += kap_sub.tail.strip()
+            elif kap_sub.tag == "rad" or kap_sub.tag == "tld":
+                if kap_sub.tag == "rad":
+                    word["root"] = kap_sub.text.strip()
                 else:
-                    if "lit" in i.attrib:
-                        word["root"] = TLD(lit=i.attrib["lit"])
+                    if "lit" in kap_sub.attrib:
+                        word["root"] = TLD(lit=kap_sub.attrib["lit"])
                     else:
                         word["root"] = TLD()
-                if i.tail and i.tail.strip():
-                    word["ending"] = i.tail.strip()
-            elif i.tag == "fnt":
+                if kap_sub.tail and kap_sub.tail.strip():
+                    word["ending"] = kap_sub.tail.strip()
+            elif kap_sub.tag == "fnt":
                 pass # TODO: return the fnt when it's used for something.
-            elif i.tag == "var":
-                pass # TODO: parse variations and return them.
+            elif kap_sub.tag == "var":
+                # Remove the trailing comma if there's one, that separates the var.
+                word["ending"] = re.split(",\s*$", word["ending"])[0]
+                # Parse the *var*iation word, it has a kap like the main one.
+                for var_sub in kap_sub:
+                    if var_sub.tag == "kap":
+                        word["var"] = self._parse_kap(var_sub)
+                        #self._log(1, "Found extra word: %s" % self._parse_kap(var_sub))
+                    else:
+                        raise UnexpectedTag(var_sub)
             else:
-                raise UnexpectedTag(i)
+                raise UnexpectedTag(kap_sub)
         
-        if word["ending"] and word["ending"][0] == "/":
-            word["ending"] = word["ending"][1:]
+        # What does it do?
+#         if word["ending"] and word["ending"][0] == "/":
+#             word["ending"] = word["ending"][1:]
         
         # Handle exceptions
-        if self._exceptions:
-            if word["begining"] == "ilo" and word["root"] == "":
-                word["begining"] = ""
-                word["root"] = TLD()
-                word["ending"] = "o"
-            elif word["begining"] == u"nedaŭra planto" and word["root"] == "":
-                word["begining"] = u"nedaŭra"
-                word["root"] = TLD()
-                word["ending"] = "o"
-            elif word["begining"] == u"naĝoveziko,":
-                word["begining"] = u"naĝo"
-                word["root"] = TLD()
-                word["ending"] = "o"
+#         if self._exceptions:
+#             if word["begining"] == "ilo" and word["root"] == "":
+#                 word["begining"] = ""
+#                 word["root"] = TLD()
+#                 word["ending"] = "o"
+#             elif word["begining"] == u"nedaŭra planto" and word["root"] == "":
+#                 word["begining"] = u"nedaŭra"
+#                 word["root"] = TLD()
+#                 word["ending"] = "o"
+#             elif word["begining"] == u"naĝoveziko,":
+#                 word["begining"] = u"naĝo"
+#                 word["root"] = TLD()
+#                 word["ending"] = "o"
+        
+        if any(["," in x for x in word.values() if isinstance(x, str)]):
+            raise WordException(u"One component of word %s contains a comma, extracted from %s" % (word, etree.tostring(kap)))
         
         return word
     
