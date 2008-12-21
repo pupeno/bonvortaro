@@ -41,8 +41,7 @@ class TestElementToString(unittest.TestCase):
         
     def make_wrapped_element(self, inner_text):
         """Return inner_text wrapped in <removeme> tags and parsed."""
-        return self._command._parse_xml(
-            StringIO.StringIO("<removeme>%s</removeme>" % inner_text)).getroot()
+        return self._command._parse_xml(StringIO.StringIO("<removeme>%s</removeme>" % inner_text)).getroot()
         
         
     
